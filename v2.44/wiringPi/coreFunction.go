@@ -5,6 +5,62 @@ package wiringPi
 */
 import "C"
 
+//WiringPiMode means wiringPi modes
+type WiringPiMode int
+
+const (
+	PinsPinMode          WiringPiMode = C.WPI_MODE_PINS
+	GPIOPinMode          WiringPiMode = C.WPI_MODE_GPIO
+	GPIOSysPinMode       WiringPiMode = C.WPI_MODE_GPIO_SYS
+	PhysPinMode          WiringPiMode = C.WPI_MODE_PHYS
+	PiFacePinMode        WiringPiMode = C.WPI_MODE_PIFACE
+	UninitialisedPinMode WiringPiMode = C.WPI_MODE_UNINITIALISED
+)
+
+// Pin modes
+// PinMode corresponds to GPIO PIN mode.
+type PinMode int
+
+const (
+	InputPinMode          PinMode = C.INPUT
+	OutputPinMode         PinMode = C.OUTPUT
+	PwmOutputPinMode      PinMode = C.PWM_OUTPUT
+	GPIOClockPinMode      PinMode = C.GPIO_CLOCK
+	SoftPwmOutputPinMode  PinMode = C.SOFT_PWM_OUTPUT
+	SoftToneOutputPinMode PinMode = C.SOFT_TONE_OUTPUT
+	PwmToneOutputPinMode  PinMode = C.PWM_TONE_OUTPUT
+)
+
+const LOW int = 0
+const HIGH int = 1
+
+// Pull up/down/none
+type PullDest int
+
+const (
+	PullOff  PullDest = C.PUD_OFF  //no pull up/down
+	PullDown PullDest = C.PUD_DOWN //pull to ground
+	PullUp   PullDest = C.PUD_UP   // pull to 3.3V
+)
+
+// PWM
+type PWM int
+
+const (
+	PwmModeMs  PWM = C.PWM_MODE_MS
+	PwmModeBal PWM = C.PWM_MODE_BAL
+)
+
+// Interrupt levels
+type InterruptLevel int
+
+const (
+	IntEdgeSetup   InterruptLevel = C.INT_EDGE_SETUP
+	IntEdgeFalling InterruptLevel = C.INT_EDGE_FALLING
+	IntEdgeRising  InterruptLevel = C.INT_EDGE_RISING
+	IntEdgeBoth    InterruptLevel = C.INT_EDGE_BOTH
+)
+
 /*
 These functions work directly on the Raspberry Pi and also with
 external GPIO modules such as GPIO expanders and so on, although
@@ -21,7 +77,7 @@ has no on-board analog hardware.
 //This function has no effect when in Sys mode. If you
 //need to change the pin mode, then you can do it with
 //the gpio program in a script before you start your program.
-func pinMode(pin int, mode int) {
+func pinMode(pin int, mode PinMode) {
 
 	C.pinMode(C.int(pin), C.int(mode))
 }
@@ -37,7 +93,7 @@ func pinMode(pin int, mode int) {
 //when in Sys mode. If you need to activate a pull-up/pull-down,
 //then you can do it with the gpio program in a script before
 //you start your program.
-func pullUpDnControl(pin int, pud int) {
+func pullUpDnControl(pin int, pud PullDest) {
 
 	C.pullUpDnControl(C.int(pin), C.int(pud))
 }

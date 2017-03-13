@@ -24,7 +24,7 @@ gpio i2cdetect
 is all that’s needed.
 */
 
-//wiringPiI2CSetup initialises the I2C system with your given device
+//WiringPiI2CSetup initialises the I2C system with your given device
 //identifier. The ID is the I2C number of the device
 //and you can use the i2cdetect program to find this
 //out. wiringPiI2CSetup() will work out which revision
@@ -34,28 +34,32 @@ is all that’s needed.
 //E.g. the popular MCP23017 GPIO expander is usually device Id 0x20, so this is the number you would pass into wiringPiI2CSetup().
 //For all the following functions, if the return value is
 //negative then an error has happened and you should consult errno.
-func wiringPiI2CSetup(devID int) int {
+func WiringPiI2CSetup(devID int) int {
 	ret := int(C.wiringPiI2CSetup(C.int(devID)))
 	return ret
 }
 
-/*
-    int wiringPiI2CRead (int fd) ;
+//WiringPiI2CRead Simple device read. Some devices present data when
+//you read them without having to do any register transactions.
+func WiringPiI2CRead(fd int) int {
+	ret := int(C.wiringPiI2CRead(C.int(fd)))
+	return ret
+}
 
-Simple device read. Some devices present data when you read them without having to do any register transactions.
+//WiringPiI2CWrite Simple device write. Some devices accept data this way
+//without needing to access any internal registers.
+func WiringPiI2CWrite(fd int, data int) int {
+	ret := int(C.wiringPiI2CWrite(C.int(fd), C.int(data)))
+	return ret
+}
 
-    int wiringPiI2CWrite (int fd, int data) ;
-
-Simple device write. Some devices accept data this way without needing to access any internal registers.
-
-    int wiringPiI2CWriteReg8 (int fd, int reg, int data) ;
-    int wiringPiI2CWriteReg16 (int fd, int reg, int data) ;
-
-These write an 8 or 16-bit data value into the device register indicated.
-
-    int wiringPiI2CReadReg8 (int fd, int reg) ;
-    int wiringPiI2CReadReg16 (int fd, int reg) ;
-
-These read an 8 or 16-bit value from the device register indicated.
-
-*/
+//These write an 8 or 16-bit data value into the device
+//register indicated.
+func WiringPiI2CWriteReg8(fd int, reg int, data int) int {
+	ret := int(C.wiringPiI2CWriteReg8(C.int(fd), C.int(reg), C.int(data)))
+	return ret
+}
+func WiringPiI2CWriteReg16(fd int, reg int, data int) int {
+	ret := int(C.wiringPiI2CWriteReg16(C.int(fd), C.int(reg), C.int(data)))
+	return ret
+}
