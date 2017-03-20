@@ -5,19 +5,18 @@ package wiringPi
 */
 import "C"
 
-//WiringPiMode means wiringPi modes
-type WiringPiMode int
+//Mode means wiringPi modes
+type Mode int
 
 const (
-	PinsPinMode          WiringPiMode = C.WPI_MODE_PINS
-	GPIOPinMode          WiringPiMode = C.WPI_MODE_GPIO
-	GPIOSysPinMode       WiringPiMode = C.WPI_MODE_GPIO_SYS
-	PhysPinMode          WiringPiMode = C.WPI_MODE_PHYS
-	PiFacePinMode        WiringPiMode = C.WPI_MODE_PIFACE
-	UninitialisedPinMode WiringPiMode = C.WPI_MODE_UNINITIALISED
+	PinsPinMode          Mode = C.WPI_MODE_PINS
+	GPIOPinMode          Mode = C.WPI_MODE_GPIO
+	GPIOSysPinMode       Mode = C.WPI_MODE_GPIO_SYS
+	PhysPinMode          Mode = C.WPI_MODE_PHYS
+	PiFacePinMode        Mode = C.WPI_MODE_PIFACE
+	UninitialisedPinMode Mode = C.WPI_MODE_UNINITIALISED
 )
 
-// Pin modes
 // PinMode corresponds to GPIO PIN mode.
 type PinMode int
 
