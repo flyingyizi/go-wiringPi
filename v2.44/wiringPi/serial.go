@@ -19,7 +19,7 @@ It can use the on-board serial port, or any USB serial device
  the device name in the initial open function.
 */
 
-//This opens and initialises the serial device and sets
+//SerialOpen opens and initialises the serial device and sets
 //the baud rate. It sets the port into “raw” mode (character
 //at a time and no translations), and sets the read
 //timeout to 10 seconds. The return value is the file
@@ -28,7 +28,7 @@ It can use the on-board serial port, or any USB serial device
 //todo
 func SerialOpen(device string, baud int) int {
 	v := C.CString(device)
-	ret := int(C.myserialOpen(unsafe.Pointer(v), C.int(baud)))
+	ret := int(C.myserialOpen((v), C.int(baud)))
 	C.free(unsafe.Pointer(v))
 	return ret
 }
