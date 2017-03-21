@@ -8,9 +8,16 @@ package wiringPi
 static int myserialOpen(char* device, int baud) {
 	return serialOpen((const char*)device, (const int)baud);
 }
+static void myserialPrintf(int fd, char* msg) {
+   serialPrintf(fd, msg);
+}
+
 */
 import "C"
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 /*
 WiringPi includes a simplified serial port handling library.
@@ -33,38 +40,61 @@ func SerialOpen(device string, baud int) int {
 	return ret
 }
 
+//SerialClose Closes the device identified by the file descriptor given.
+func SerialClose(fd int) {
+	C.serialClose(C.int(fd))
+}
+
+//SerialPutchar Sends the single byte to the serial device
+//identified by the given file descriptor.
+func SerialPutchar(fd int, c uint8) {
+	C.serialPutchar(C.int(fd), C.uchar(c))
+}
+
+//SerialPuts Sends the nul-terminated string to the serial device identified
+//by the given file descriptor.
+func SerialPuts(fd int, s string) {
+
+	v := C.CString(s)
+	C.serialPuts(C.int(fd), v)
+	C.free(unsafe.Pointer(v))
+}
+
+//SerialPrintf Emulates the system printf function to the serial device.
+func SerialPrintf(fd int, format string, a ...interface{}) {
+	message := fmt.Sprintf(format, a)
+	msg := C.CString(message)
+	C.myserialPrintf(C.int(fd), msg)
+	C.free(unsafe.Pointer(msg))
+}
+
+//SerialDataAvail Returns the number of characters available for reading, or -1 for
+//any error condition, in which case errno will be set appropriately.
+func SerialDataAvail(fd int) int {
+	ret := int(C.serialDataAvail(C.int(fd)))
+	return ret
+}
+
+//SerialGetchar Returns the next character available on the serial device.
+//This call will block for up to 10 seconds if no data is
+//available (when it will return -1)/*
+func SerialGetchar(fd int) int {
+	ret := int(C.serialGetchar(C.int(fd)))
+	return ret
+}
+
+//SerialFlush discards all data received, or waiting to be send down the given device.
+//Note: The file descriptor (fd) returned is a standard Linux file descriptor.
+//You can use the standard read(), write(), etc. system calls on this
+//file descriptor as required. E.g. you may wish to write a larger block of
+//binary data where the serialPutchar() or serialPuts() function may not
+//be the most appropriate function to use, in which case, you can use write()
+//to send the data.
+func SerialFlush(fd int) {
+	C.serialFlush(C.int(fd))
+}
+
 /*
-
-
-    void serialClose (int fd) ;
-
-Closes the device identified by the file descriptor given.
-
-    void  serialPutchar (int fd, unsigned char c) ;
-
-Sends the single byte to the serial device identified by the given file descriptor.
-
-    void  serialPuts (int fd, char *s) ;
-
-Sends the nul-terminated string to the serial device identified by the given file descriptor.
-
-    void  serialPrintf (int fd, char *message, …) ;
-
-Emulates the system printf function to the serial device.
-
-    int   serialDataAvail (int fd) ;
-
-Returns the number of characters available for reading, or -1 for any error condition, in which case errno will be set appropriately.
-
-    int serialGetchar (int fd) ;
-
-Returns the next character available on the serial device. This call will block for up to 10 seconds if no data is available (when it will return -1)
-
-    void serialFlush (int fd) ;
-
-This discards all data received, or waiting to be send down the given device.
-
-Note: The file descriptor (fd) returned is a standard Linux file descriptor. You can use the standard read(), write(), etc. system calls on this file descriptor as required. E.g. you may wish to write a larger block of binary data where the serialPutchar() or serialPuts() function may not be the most appropriate function to use, in which case, you can use write() to send the data.
 Advanced Serial Port Control
 
 The wiringSerial library is intended to provide simplified control – suitable for most applications, however if you need advanced control – e.g. parity control, modem control lines (via a USB adapter, there are none on the Pi’s on-board UART!) and so on, then you need to do some of this the “old fashioned” way.

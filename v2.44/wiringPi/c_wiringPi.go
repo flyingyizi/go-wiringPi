@@ -9,5 +9,6 @@ package wiringPi
 #include "wiringPi/wiringPi/wiringPi.c"
 
 #include "wiringPi/wiringPi/wiringPiI2C.c"
+#include "wiringPi/wiringPi/wiringPiSPI.c"
 */
 import "C"

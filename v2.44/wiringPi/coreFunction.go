@@ -30,7 +30,10 @@ const (
 	PwmToneOutputPinMode  PinMode = C.PWM_TONE_OUTPUT
 )
 
+//LOW means logic low
 const LOW int = 0
+
+//HIGH means logic high
 const HIGH int = 1
 
 // Pull up/down/none
@@ -42,7 +45,7 @@ const (
 	PullUp   PullDest = C.PUD_UP   // pull to 3.3V
 )
 
-// PWM
+//PWM
 type PWM int
 
 const (
@@ -50,7 +53,7 @@ const (
 	PwmModeBal PWM = C.PWM_MODE_BAL
 )
 
-// Interrupt levels
+//InterruptLevel means Interrupt levels
 type InterruptLevel int
 
 const (
