@@ -10,9 +10,9 @@ type Mode int
 
 const (
 	PinsPinMode          Mode = C.WPI_MODE_PINS
-	GPIOPinMode          Mode = C.WPI_MODE_GPIO
+	GPIOPinMode          Mode = C.WPI_MODE_GPIO //GPIOPinMode Initialises the system into GPIO Pin mode and uses the	memory mapped hardware directly.
 	GPIOSysPinMode       Mode = C.WPI_MODE_GPIO_SYS
-	PhysPinMode          Mode = C.WPI_MODE_PHYS
+	PhysPinMode          Mode = C.WPI_MODE_PHYS //PhysPinMode Initialises the system into Physical Pin mode and uses the 	memory mapped hardware directly
 	PiFacePinMode        Mode = C.WPI_MODE_PIFACE
 	UninitialisedPinMode Mode = C.WPI_MODE_UNINITIALISED
 )
