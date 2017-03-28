@@ -9,7 +9,7 @@ import (
 //wiringPi pin 0 is BCM_GPIO 17.
 //Simple sequence over the first 8 GPIO pins - LEDs
 
-func Example() {
+func Example_blink8() {
 	fmt.Println("Raspberry Pi - 8-LED Sequencer")
 	fmt.Println("==============================")
 	fmt.Println("Connect LEDs to the first 8 GPIO pins and watch ...")
