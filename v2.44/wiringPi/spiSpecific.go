@@ -35,21 +35,21 @@ system calls though – write() may be better to use for sending data to
 Functions available:
 */
 
-//WiringPiSPISetup is the way to initialise a channel (The Pi has 2 channels; 0 and 1).
+//SPISetup is the way to initialise a channel (The Pi has 2 channels; 0 and 1).
 //The speed parameter is an integer in the range 500,000 through
 //32,000,000 and represents the SPI clock speed in Hz.
 //The returned value is the Linux file-descriptor for the device,
 //or -1 on error. If an error has happened, you may use the
 //standard errno global variable to see why.
-func WiringPiSPISetup(channel int, speed int) int {
+func SPISetup(channel int, speed int) int {
 	ret := int(C.wiringPiSPISetup(C.int(channel), C.int(speed)))
 	return ret
 }
 
-//WiringPiSPIDataRW performs a simultaneous write/read transaction over the selected
+//SPIDataRW performs a simultaneous write/read transaction over the selected
 //SPI bus. Data that was in your buffer is overwritten by data
 //returned from the SPI bus.
-func WiringPiSPIDataRW(channel int, data string, len int) int {
+func SPIDataRW(channel int, data string, len int) int {
 	msg := C.CString(data)
 	d := (*C.uchar)(unsafe.Pointer(msg))
 	ret := C.wiringPiSPIDataRW(C.int(channel), d, C.int(len))

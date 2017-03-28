@@ -10,9 +10,9 @@ type Mode int
 
 const (
 	PinsPinMode          Mode = C.WPI_MODE_PINS
-	GPIOPinMode          Mode = C.WPI_MODE_GPIO //GPIOPinMode Initialises the system into GPIO Pin mode and uses the	memory mapped hardware directly.
-	GPIOSysPinMode       Mode = C.WPI_MODE_GPIO_SYS
-	PhysPinMode          Mode = C.WPI_MODE_PHYS //PhysPinMode Initialises the system into Physical Pin mode and uses the 	memory mapped hardware directly
+	GPIOPinMode          Mode = C.WPI_MODE_GPIO     //GPIOPinMode Initialises the system into GPIO Pin mode and uses the	memory mapped hardware directly.
+	GPIOSysPinMode       Mode = C.WPI_MODE_GPIO_SYS // Initialisation (again), however this time we are using the /sys/class/gpio  interface to the GPIO systems - slightly slower, but always usable as a non-root user, assuming the devices are already exported and setup correctly.
+	PhysPinMode          Mode = C.WPI_MODE_PHYS     //PhysPinMode Initialises the system into Physical Pin mode and uses the 	memory mapped hardware directly
 	PiFacePinMode        Mode = C.WPI_MODE_PIFACE
 	UninitialisedPinMode Mode = C.WPI_MODE_UNINITIALISED
 )
@@ -36,20 +36,25 @@ const LOW int = 0
 //HIGH means logic high
 const HIGH int = 1
 
-// Pull up/down/none
+// PullDest : Pull up/down/none
 type PullDest int
 
 const (
-	PullOff  PullDest = C.PUD_OFF  //no pull up/down
-	PullDown PullDest = C.PUD_DOWN //pull to ground
-	PullUp   PullDest = C.PUD_UP   // pull to 3.3V
+	// PullOff : no pull up/down
+	PullOff PullDest = C.PUD_OFF
+	//PullDown : pull to ground
+	PullDown PullDest = C.PUD_DOWN
+	//PullUp : pull to 3.3V
+	PullUp PullDest = C.PUD_UP
 )
 
-//PWM
+//PWM :Pulse Width Modulation
 type PWM int
 
 const (
-	PwmModeMs  PWM = C.PWM_MODE_MS
+	//PwmModeMS . The mark:space mode is traditional
+	PwmModeMS PWM = C.PWM_MODE_MS
+	// PwmModeBal . mode balanced
 	PwmModeBal PWM = C.PWM_MODE_BAL
 )
 
@@ -100,11 +105,11 @@ func pullUpDnControl(pin int, pud PullDest) {
 	C.pullUpDnControl(C.int(pin), C.int(pud))
 }
 
-//digitalWrite Writes the value HIGH or LOW (1 or 0) to the
+//DigitalWrite Writes the value HIGH or LOW (1 or 0) to the
 //given pin which must have been previously set as an output.
 //WiringPi treats any non-zero number as HIGH,
 //however 0 is the only representation of LOW.
-func digitalWrite(pin int, value int) {
+func DigitalWrite(pin int, value int) {
 
 	C.digitalWrite(C.int(pin), C.int(value))
 }
@@ -138,14 +143,23 @@ func analogRead(pin int) int {
 	return ret
 }
 
-//analogWrite writes the given value to the supplied
+//AnalogWrite writes the given value to the supplied
 //analog pin. You will need to register additional analog
 //modules to enable this function for devices such as the Gertboard.
-func analogWrite(pin int, value int) {
+func AnalogWrite(pin int, value int) {
 	C.analogWrite(C.int(pin), C.int(value))
 }
 
-func WiringPiSetup() int {
+//Setup Must be called once at the start of your program execution.
+//* Default setup: Initialises the system into wiringPi Pin mode and uses the
+//*	memory mapped hardware directly.
+//* Changed now to revert to "gpio" mode if we're running on a Compute Module.
+func Setup() int {
 	ret := C.wiringPiSetup()
 	return int(ret)
+}
+
+// SetPinMode : Sets the mode of a pin to be input, output or PWM output
+func SetPinMode(pin int, mode PinMode) {
+	C.pinMode(C.int(pin), C.int(mode))
 }

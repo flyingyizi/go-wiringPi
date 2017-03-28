@@ -84,7 +84,7 @@ func goInterruptCB() {
 	fInterruptHolder()
 }
 
-// WiringPiISR function registers a function to received interrupts on
+// ISR function registers a function to received interrupts on
 // the specified pin. The edgeType parameter is either
 // INT_EDGE_FALLING, INT_EDGE_RISING, INT_EDGE_BOTH or
 // INT_EDGE_SETUP. If it is INT_EDGE_SETUP then no initialisation
@@ -111,7 +111,7 @@ func goInterruptCB() {
 // See the isr.c example program for more details on how to
 // use this feature.
 //todo
-func WiringPiISR(pin int, edgeType int, cbfun func()) {
+func ISR(pin int, edgeType int, cbfun func()) {
 	fInterruptHolder = cbfun
 	C.mywiringPiISR(C.int(pin), C.int(edgeType))
 }

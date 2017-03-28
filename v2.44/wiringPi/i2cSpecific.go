@@ -24,7 +24,7 @@ gpio i2cdetect
 is all that’s needed.
 */
 
-//WiringPiI2CSetup initialises the I2C system with your given device
+//I2CSetup initialises the I2C system with your given device
 //identifier. The ID is the I2C number of the device
 //and you can use the i2cdetect program to find this
 //out. wiringPiI2CSetup() will work out which revision
@@ -34,32 +34,35 @@ is all that’s needed.
 //E.g. the popular MCP23017 GPIO expander is usually device Id 0x20, so this is the number you would pass into wiringPiI2CSetup().
 //For all the following functions, if the return value is
 //negative then an error has happened and you should consult errno.
-func WiringPiI2CSetup(devID int) int {
+func I2CSetup(devID int) int {
 	ret := int(C.wiringPiI2CSetup(C.int(devID)))
 	return ret
 }
 
-//WiringPiI2CRead Simple device read. Some devices present data when
+//I2CRead Simple device read. Some devices present data when
 //you read them without having to do any register transactions.
-func WiringPiI2CRead(fd int) int {
+func I2CRead(fd int) int {
 	ret := int(C.wiringPiI2CRead(C.int(fd)))
 	return ret
 }
 
-//WiringPiI2CWrite Simple device write. Some devices accept data this way
+//I2CWrite Simple device write. Some devices accept data this way
 //without needing to access any internal registers.
-func WiringPiI2CWrite(fd int, data int) int {
+func I2CWrite(fd int, data int) int {
 	ret := int(C.wiringPiI2CWrite(C.int(fd), C.int(data)))
 	return ret
 }
 
-//These write an 8 or 16-bit data value into the device
+//I2CWriteReg8 write an 8  data value into the device
 //register indicated.
-func WiringPiI2CWriteReg8(fd int, reg int, data int) int {
+func I2CWriteReg8(fd int, reg int, data int) int {
 	ret := int(C.wiringPiI2CWriteReg8(C.int(fd), C.int(reg), C.int(data)))
 	return ret
 }
-func WiringPiI2CWriteReg16(fd int, reg int, data int) int {
+
+//I2CWriteReg16 write a 16-bit data value into the device
+//register indicated.
+func I2CWriteReg16(fd int, reg int, data int) int {
 	ret := int(C.wiringPiI2CWriteReg16(C.int(fd), C.int(reg), C.int(data)))
 	return ret
 }
