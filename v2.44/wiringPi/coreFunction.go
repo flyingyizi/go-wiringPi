@@ -144,3 +144,8 @@ func analogRead(pin int) int {
 func analogWrite(pin int, value int) {
 	C.analogWrite(C.int(pin), C.int(value))
 }
+
+func WiringPiSetup() int {
+	ret := C.wiringPiSetup()
+	return int(ret)
+}
