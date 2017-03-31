@@ -96,17 +96,18 @@ func SerialFlush(fd int) {
 
 /*
 Advanced Serial Port Control
+The wiringSerial library is intended to provide simplified
+control – suitable for most applications, however if you need
+ advanced control – e.g. parity control, modem control lines
+ (via a USB adapter, there are none on the Pi’s on-board UART!)
+ and so on, then you need to do some of this the “old fashioned” way.
 
-The wiringSerial library is intended to provide simplified control – suitable for most applications, however if you need advanced control – e.g. parity control, modem control lines (via a USB adapter, there are none on the Pi’s on-board UART!) and so on, then you need to do some of this the “old fashioned” way.
-
-For example – To set the serial line into 7 bit mode plus even parity, you need to do this…
+For example – To set the serial line into 7 bit mode plus
+even parity, you need to do this…
 
 In your program:
-
 #include <termios.h>
-
 and in a function:
-
   struct termios options ;
 
   tcgetattr (fd, &options) ;   // Read current options

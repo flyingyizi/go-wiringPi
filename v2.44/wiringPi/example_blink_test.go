@@ -17,4 +17,6 @@ func Example_blink() {
 		wiringPi.DigitalWrite(LED, wiringPi.LOW)
 		wiringPi.Delay(500) //ms
 	}
+
+	// Output: Raspberry Pi blink
 }
