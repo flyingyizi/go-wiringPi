@@ -4,6 +4,7 @@ package wiringPi
 
 /*
 #cgo linux, CFLAGS: -O2 -D_GNU_SOURCE -Wformat=2 -Wall -Wextra -Winline  -pipe -fPIC
+#cgo linux, LDFLAGS: -lm -lpthread -lrt -lcrypt
 #include "wiringPi/wiringPi/piHiPri.c"
 #include "wiringPi/wiringPi/softPwm.c"
 #include "wiringPi/wiringPi/wiringPi.c"
