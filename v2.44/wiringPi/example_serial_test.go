@@ -21,7 +21,7 @@ func Example_serial() {
 		wiringPi.Delay(500) //ms
 	}
 
-	// Output: Raspberry Pi blink
+	//// Output: Raspberry Pi blink
 }
 
 /*

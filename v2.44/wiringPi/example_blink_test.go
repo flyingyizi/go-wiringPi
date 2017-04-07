@@ -18,5 +18,5 @@ func Example_blink() {
 		wiringPi.Delay(500) //ms
 	}
 
-	// Output: Raspberry Pi blink
+	//// Output: Raspberry Pi blink
 }
