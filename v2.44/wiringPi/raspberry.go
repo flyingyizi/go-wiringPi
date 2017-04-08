@@ -4,11 +4,12 @@ package wiringPi
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
+	"unsafe"
 )
 
 // Raspberry Pi Revision :: Model
@@ -35,21 +36,30 @@ const RPI_MAKER_EGOMAN uint = 1
 const RPI_MAKER_EMBEST uint = 2
 const RPI_MAKER_UNKNOWN uint = 3
 
-func Init() error {
+const uint32BlockSize = 4 * 1024
+
+var (
+	gpioArry []uint32
+	pwmArry  []uint32
+	clkArr   []uint32
+	padsArry []uint32
+)
+
+func Init() (err error) {
 	// piGpioBase:
 	//	The base address of the GPIO memory mapped hardware IO
-	piGpioBase := 0x20000000
+	piGpioBase := int64(0x20000000)
 
-	// Open the master /dev/ memory control device
-	// Device strategy: December 2016:
 	//	Try /dev/mem. If that fails, then
 	//	try /dev/gpiomem. If that fails then game over.
-	file, err := os.OpenFile("/dev/mem", os.O_RDWR|os.O_SYNC|os.O_CLOEXEC, 0660)
+	file, err := os.OpenFile("/dev/mem", os.O_RDWR|os.O_SYNC, 0660)
 	if err != nil {
-		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC|os.O_CLOEXEC, 0660)
+		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC, 0660) //|os.O_CLOEXEC
 
 		return errors.New("can not open /dev/mem  or /dev/gpiomem, maybe try sudo")
 	}
+	//fd can be closed after memory mapping
+	defer file.Close()
 
 	_, bmodel, _, _, _, _, err := piBoardId()
 
@@ -62,15 +72,47 @@ func Init() error {
 		piGpioBase = 0x3F000000
 
 	}
+	// Set the offsets into the memory interface.
+	GPIO_PADS := piGpioBase + 0x00100000
+	GPIO_CLOCK_BASE := piGpioBase + 0x00101000
+	GPIO_BASE := piGpioBase + 0x00200000
+	//GPIO_TIMER := piGpioBase + 0x0000B000
+	GPIO_PWM := piGpioBase + 0x0020C000
 
-	//gpio = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, GPIO_BASE) ;
-
-	//mmap, err := syscall.Mmap(int(map_file.Fd()), 0, int(t), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	//	GPIO:
+	gpio, err := syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
+		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return errors.New("mmap (GPIO) failed")
 	}
+	i := (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&gpio[0]))
+	gpioArry = i[:]
+	//	PWM
+	pwm, err := syscall.Mmap(int(file.Fd()), GPIO_PWM, uint32BlockSize,
+		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		return errors.New("mmap (PWM) failed")
+	}
+	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&pwm[0]))
+	pwmArry = i[:]
 
+	//	Clock control (needed for PWM)
+	clk, err := syscall.Mmap(int(file.Fd()), GPIO_CLOCK_BASE, uint32BlockSize,
+		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		return errors.New("mmap (CLOCK) failed")
+	}
+	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&clk[0]))
+	clkArr = i[:]
+	//	The drive pads
+	pads, err := syscall.Mmap(int(file.Fd()), GPIO_PADS, uint32BlockSize,
+		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		return errors.New("mmap (PADS) failed")
+	}
+	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&pads[0]))
+	padsArry = i[:]
+	return
 }
 
 /*
