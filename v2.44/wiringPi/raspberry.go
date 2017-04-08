@@ -1,141 +1,383 @@
+//+build linux
+
 package wiringPi
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"strconv"
 	"strings"
 )
 
-func piGPIOLayout() {
-	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
+// Raspberry Pi Revision :: Model
+const RPI_MODEL_A uint = 0       //   "Model A",	//  0
+const RPI_MODEL_B uint = 1       //   "Model B",	//  1
+const RPI_MODEL_A_PLUS uint = 2  //   "Model A+",	//  2
+const RPI_MODEL_B_PLUS uint = 3  //   "Model B+",	//  3
+const RPI_MODEL_2B uint = 4      //   "Pi 2",	//  4
+const RPI_MODEL_ALPHA uint = 5   //   "Alpha",	//  5
+const RPI_MODEL_CM uint = 6      //   "CM",		//  6
+const RPI_MODEL_UNKNOWN uint = 7 //   "Unknown07",	// 07
+const RPI_MODEL_3B uint = 8      //   "Pi 3",	// 08
+const RPI_MODEL_ZERO uint = 9    //   "Pi Zero",	// 09
+const RPI_MODEL_CM3 uint = 10    //   "CM3",	// 10
+const RPI_MODEL_ZERO_W uint = 12 //   "Pi Zero-W",	// 12
+
+const RPI_VERSION_1 uint = 0
+const RPI_VERSION_1_1 uint = 1
+const RPI_VERSION_1_2 uint = 2
+const RPI_VERSION_2 uint = 3
+
+const RPI_MAKER_SONY uint = 0
+const RPI_MAKER_EGOMAN uint = 1
+const RPI_MAKER_EMBEST uint = 2
+const RPI_MAKER_UNKNOWN uint = 3
+
+func Init() error {
+	// piGpioBase:
+	//	The base address of the GPIO memory mapped hardware IO
+	piGpioBase := 0x20000000
+
+	// Open the master /dev/ memory control device
+	// Device strategy: December 2016:
+	//	Try /dev/mem. If that fails, then
+	//	try /dev/gpiomem. If that fails then game over.
+	file, err := os.OpenFile("/dev/mem", os.O_RDWR|os.O_SYNC|os.O_CLOEXEC, 0660)
 	if err != nil {
-		return
+		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC|os.O_CLOEXEC, 0660)
+
+		return errors.New("can not open /dev/mem  or /dev/gpiomem, maybe try sudo")
+	}
+
+	_, bmodel, _, _, _, _, err := piBoardId()
+
+	if bmodel == RPI_MODEL_A || bmodel == RPI_MODEL_B || bmodel == RPI_MODEL_A_PLUS || bmodel == RPI_MODEL_B_PLUS || bmodel == RPI_MODEL_ALPHA || bmodel == RPI_MODEL_CM || bmodel == RPI_MODEL_ZERO || bmodel == RPI_MODEL_ZERO_W {
+		// piGpioBase:
+		//	The base address of the GPIO memory mapped hardware IO
+		piGpioBase = 0x20000000
+
+	} else {
+		piGpioBase = 0x3F000000
 
 	}
-	lines := strings.Split(string(cpuinfo), "\n")
-	for _, line := range lines {
-		fields := strings.Split(line, ":")
-		key := strings.TrimSpace(fields[0])
-		value := strings.TrimSpace(fields[1])
 
-		//if fields[0] {
+	//gpio = (uint32_t *)mmap(0, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, GPIO_BASE) ;
 
-		}
+	//mmap, err := syscall.Mmap(int(map_file.Fd()), 0, int(t), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+
 }
 
 /*
 
-int piGpioLayout (void)
+
+ digitalRead:
+	Read the value of a given Pin, returning HIGH or LOW
+ *********************************************************************************
+
+
+int digitalRead (int pin)
 {
-  FILE *cpuFd ;
-  char line [120] ;
-  char *c ;
-  static int  gpioLayout = -1 ;
+  char c ;
+  struct wiringPiNodeStruct *node = wiringPiNodes ;
 
-  if (gpioLayout != -1)	// No point checking twice
-    return gpioLayout ;
-
-  if ((cpuFd = fopen ("/proc/cpuinfo", "r")) == NULL)
-    piGpioLayoutOops ("Unable to open /proc/cpuinfo") ;
-
-// Start by looking for the Architecture to make sure we're really running
-//	on a Pi. I'm getting fed-up with people whinging at me because
-//	they can't get it to work on weirdFruitPi boards...
-
-  while (fgets (line, 120, cpuFd) != NULL)
-    if (strncmp (line, "Hardware", 8) == 0)
-      break ;
-
-  if (strncmp (line, "Hardware", 8) != 0)
-    piGpioLayoutOops ("No \"Hardware\" line") ;
-
-  if (wiringPiDebug)
-    printf ("piGpioLayout: Hardware: %s\n", line) ;
-
-// See if it's BCM2708 or BCM2709 or the new BCM2835.
-
-// OK. As of Kernel 4.8,  we have BCM2835 only, regardless of model.
-//	However I still want to check because it will trap the cheapskates and rip-
-//	off merchants who want to use wiringPi on non-Raspberry Pi platforms - which
-//	I do not support so don't email me your bleating whinges about anything
-//	other than a genuine Raspberry Pi.
-
-  if (! (strstr (line, "BCM2708") || strstr (line, "BCM2709") || strstr (line, "BCM2835")))
+  if ((pin & PI_GPIO_MASK) == 0)		// On-Board Pin
   {
-    fprintf (stderr, "Unable to determine hardware version. I see: %s,\n", line) ;
-    fprintf (stderr, " - expecting BCM2708, BCM2709 or BCM2835.\n") ;
-    fprintf (stderr, "If this is a genuine Raspberry Pi then please report this\n") ;
-    fprintf (stderr, "to projects@drogon.net. If this is not a Raspberry Pi then you\n") ;
-    fprintf (stderr, "are on your own as wiringPi is designed to support the\n") ;
-    fprintf (stderr, "Raspberry Pi ONLY.\n") ;
-    exit (EXIT_FAILURE) ;
+    if (wiringPiMode == WPI_MODE_GPIO_SYS)	// Sys mode
+    {
+      if (sysFds [pin] == -1)
+	return LOW ;
+
+      lseek  (sysFds [pin], 0L, SEEK_SET) ;
+      read   (sysFds [pin], &c, 1) ;
+      return (c == '0') ? LOW : HIGH ;
+    }
+    else if (wiringPiMode == WPI_MODE_PINS)
+      pin = pinToGpio [pin] ;
+    else if (wiringPiMode == WPI_MODE_PHYS)
+      pin = physToGpio [pin] ;
+    else if (wiringPiMode != WPI_MODE_GPIO)
+      return LOW ;
+
+    if ((*(gpio + gpioToGPLEV [pin]) & (1 << (pin & 31))) != 0)
+      return HIGH ;
+    else
+      return LOW ;
   }
-
-// Right - we're Probably on a Raspberry Pi. Check the revision field for the real
-//	hardware type
-//	In-future, I ought to use the device tree as there are now Pi entries in
-//	/proc/device-tree/ ...
-//	but I'll leave that for the next revision.
-
-// Isolate the Revision line
-
-  rewind (cpuFd) ;
-  while (fgets (line, 120, cpuFd) != NULL)
-    if (strncmp (line, "Revision", 8) == 0)
-      break ;
-
-  fclose (cpuFd) ;
-
-  if (strncmp (line, "Revision", 8) != 0)
-    piGpioLayoutOops ("No \"Revision\" line") ;
-
-// Chomp trailing CR/NL
-
-  for (c = &line [strlen (line) - 1] ; (*c == '\n') || (*c == '\r') ; --c)
-    *c = 0 ;
-
-  if (wiringPiDebug)
-    printf ("piGpioLayout: Revision string: %s\n", line) ;
-
-// Scan to the first character of the revision number
-
-  for (c = line ; *c ; ++c)
-    if (*c == ':')
-      break ;
-
-  if (*c != ':')
-    piGpioLayoutOops ("Bogus \"Revision\" line (no colon)") ;
-
-// Chomp spaces
-
-  ++c ;
-  while (isspace (*c))
-    ++c ;
-
-  if (!isxdigit (*c))
-    piGpioLayoutOops ("Bogus \"Revision\" line (no hex digit at start of revision)") ;
-
-// Make sure its long enough
-
-  if (strlen (c) < 4)
-    piGpioLayoutOops ("Bogus revision line (too small)") ;
-
-// Isolate  last 4 characters: (in-case of overvolting or new encoding scheme)
-
-  c = c + strlen (c) - 4 ;
-
-  if (wiringPiDebug)
-    printf ("piGpioLayout: last4Chars are: \"%s\"\n", c) ;
-
-  if ( (strcmp (c, "0002") == 0) || (strcmp (c, "0003") == 0))
-    gpioLayout = 1 ;
   else
-    gpioLayout = 2 ;	// Covers everything else from the B revision 2 to the B+, the Pi v2, v3, zero and CM's.
+  {
+    if ((node = wiringPiFindNode (pin)) == NULL)
+      return LOW ;
+    return node->digitalRead (node, pin) ;
+  }
+}
+*/
 
-  if (wiringPiDebug)
-    printf ("piGpioLayoutOops: Returning revision: %d\n", gpioLayout) ;
+func piGPIOLayout() (err error) {
+	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return err
 
-  return gpioLayout ;
+	}
+	lines := strings.Split(string(cpuinfo), "\n")
+
+	str := `Unable to determine hardware version. I see: %s 
+     - expecting BCM2708, BCM2709 or BCM2835. 
+    If this is a genuine Raspberry Pi then please report this 
+    to projects@drogon.net. If this is not a Raspberry Pi then you 
+    are on your own as wiringPi is designed to support the 
+    Raspberry Pi ONLY.\n`
+	var ErrHardWare error = errors.New(str)
+
+	for _, line := range lines {
+		fields := strings.Split(line, ":")
+		key := strings.TrimSpace(fields[0])
+		value := strings.TrimSpace(fields[1])
+		if key == "Hardware" {
+			if value == "BCM2708" || value == "BCM2709" || value == "BCM2835" {
+				ErrHardWare = nil
+			}
+		} else if key == "Revision" {
+
+			return ErrHardWare
+		}
+		//unicode.IsNumber
+
+	}
+	return ErrHardWare
 }
 
-*/
+func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
+
+	str := `Unable to determine boardinfo. If this is not a Raspberry Pi then you 
+    are on your own as wiringPi is designed to support the 
+    Raspberry Pi ONLY.\n`
+	var ErrRevision error = errors.New(str)
+
+	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return 0, 0, 0, 0, 0, 0, ErrRevision
+
+	}
+	lines := strings.Split(string(cpuinfo), "\n")
+
+	revisionValue := ""
+	for _, line := range lines {
+		fields := strings.Split(line, ":")
+		key := strings.TrimSpace(fields[0])
+		value := strings.TrimSpace(fields[1])
+		if key == "Revision" {
+			ErrRevision = nil
+			revisionValue = value
+			break
+		}
+		//unicode.IsNumber
+	}
+
+	// If longer than 4, we'll assume it's been overvolted
+	if len(revisionValue) > 4 {
+		bWarranty = 1
+		// Extract last 4 characters
+		revisionValue = revisionValue[len(revisionValue)-4:]
+	}
+
+	// Hex number with no leading 0x
+	i, err := strconv.ParseUint(revisionValue, 16, 32)
+	revision := (uint)(i)
+	if err != nil {
+		return 0, 0, 0, 0, 0, 0, err
+	}
+
+	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
+	scheme := (revision & (1 << 23)) >> 23
+
+	if scheme > 0 {
+		pcbrev = (revision & (0x0F << 0)) >> 0
+		bmodel = (revision & (0xFF << 4)) >> 4
+		processor = (revision & (0x0F << 12)) >> 12 // Not used for now.
+		manufacturer = (revision & (0x0F << 16)) >> 16
+		ram = (revision & (0x07 << 20)) >> 20
+		bWarranty = (revision & (0x03 << 24)) >> 24
+
+	} else {
+		switch revisionValue {
+		case "0002":
+			bmodel = RPI_MODEL_B
+			pcbrev = RPI_VERSION_1
+			ram = 0
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0003":
+			bmodel = RPI_MODEL_B
+			pcbrev = RPI_VERSION_1_1
+			ram = 0
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0004":
+			bmodel = RPI_MODEL_B
+			pcbrev = RPI_VERSION_1_2
+			ram = 0
+			manufacturer = RPI_MAKER_SONY
+		case "0005":
+			fallthrough
+		case "0006":
+			fallthrough
+		case "000f":
+			fallthrough
+		case "000d":
+			bmodel = RPI_MODEL_B
+			pcbrev = RPI_VERSION_1_2
+			ram = 0
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0007":
+			fallthrough
+		case "0009":
+			bmodel = RPI_MODEL_A
+			pcbrev = RPI_VERSION_1_2
+			ram = 0
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0008":
+			bmodel = RPI_MODEL_A
+			pcbrev = RPI_VERSION_1_2
+			ram = 0
+			manufacturer = RPI_MAKER_SONY
+		case "0010":
+			fallthrough
+		case "0016":
+			bmodel = RPI_MODEL_B_PLUS
+			pcbrev = RPI_VERSION_1_2
+			ram = 1
+			manufacturer = RPI_MAKER_SONY
+		case "0013":
+			bmodel = RPI_MODEL_B_PLUS
+			pcbrev = RPI_VERSION_1_2
+			ram = 1
+			manufacturer = RPI_MAKER_EMBEST
+		case "0019":
+			bmodel = RPI_MODEL_B_PLUS
+			pcbrev = RPI_VERSION_1_2
+			ram = 1
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0011":
+			fallthrough
+		case "0017":
+			bmodel = RPI_MODEL_CM
+			pcbrev = RPI_VERSION_1_1
+			ram = 1
+			manufacturer = RPI_MAKER_SONY
+		case "0014":
+			bmodel = RPI_MODEL_CM
+			pcbrev = RPI_VERSION_1_1
+			ram = 1
+			manufacturer = RPI_MAKER_EMBEST
+		case "001a":
+			bmodel = RPI_MODEL_CM
+			pcbrev = RPI_VERSION_1_1
+			ram = 1
+			manufacturer = RPI_MAKER_EGOMAN
+		case "0012":
+			fallthrough
+		case "0018":
+			bmodel = RPI_MODEL_A_PLUS
+			pcbrev = RPI_VERSION_1_1
+			ram = 0
+			manufacturer = RPI_MAKER_SONY
+		case "0015":
+			bmodel = RPI_MODEL_A_PLUS
+			pcbrev = RPI_VERSION_1_1
+			ram = 1
+			manufacturer = RPI_MAKER_EMBEST
+		case "001b":
+			bmodel = RPI_MODEL_A_PLUS
+			pcbrev = RPI_VERSION_1_1
+			ram = 0
+			manufacturer = RPI_MAKER_EGOMAN
+
+		}
+
+	}
+
+	return pcbrev, bmodel, processor, manufacturer, ram, bWarranty, ErrRevision
+
+	//-------------------------------------------------------------------------
+	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
+	//-------------------------------------------------------------------------
+	//
+	// The file /proc/cpuinfo contains a line such as:-
+	//
+	// Revision    : 0003
+	//
+	// that holds the revision number of the Raspberry Pi.
+	// Known revisions (prior to the Raspberry Pi 2) are:
+	//
+	//     +----------+---------+---------+--------+-------------+
+	//     | Revision |  Model  | PCB Rev | Memory | Manufacture |
+	//     +----------+---------+---------+--------+-------------+
+	//     |   0000   |         |         |        |             |
+	//     |   0001   |         |         |        |             |
+	//     |   0002   |    B    |    1    | 256 MB |             |
+	//     |   0003   |    B    |    1    | 256 MB |             |
+	//     |   0004   |    B    |    2    | 256 MB |   Sony      |
+	//     |   0005   |    B    |    2    | 256 MB |   Qisda     |
+	//     |   0006   |    B    |    2    | 256 MB |   Egoman    |
+	//     |   0007   |    A    |    2    | 256 MB |   Egoman    |
+	//     |   0008   |    A    |    2    | 256 MB |   Sony      |
+	//     |   0009   |    A    |    2    | 256 MB |   Qisda     |
+	//     |   000a   |         |         |        |             |
+	//     |   000b   |         |         |        |             |
+	//     |   000c   |         |         |        |             |
+	//     |   000d   |    B    |    2    | 512 MB |   Egoman    |
+	//     |   000e   |    B    |    2    | 512 MB |   Sony      |
+	//     |   000f   |    B    |    2    | 512 MB |   Qisda     |
+	//     |   0010   |    B+   |    1    | 512 MB |   Sony      |
+	//     |   0011   | compute |    1    | 512 MB |   Sony      |
+	//     |   0012   |    A+   |    1    | 256 MB |   Sony      |
+	//     |   0013   |    B+   |    1    | 512 MB |   Embest    |
+	//     |   0014   | compute |    1    | 512 MB |   Sony      |
+	//     |   0015   |    A+   |    1    | 256 MB |   Sony      |
+	//     +----------+---------+---------+--------+-------------+
+	//
+	// If the Raspberry Pi has been over-volted (voiding the warranty) the
+	// revision number will have 100 at the front. e.g. 1000002.
+	//
+	//-------------------------------------------------------------------------
+	//
+	// With the release of the Raspberry Pi 2, there is a new encoding of the
+	// Revision field in /proc/cpuinfo. The bit fields are as follows
+	//
+	//     +----+----+----+----+----+----+----+----+
+	//     |FEDC|BA98|7654|3210|FEDC|BA98|7654|3210|
+	//     +----+----+----+----+----+----+----+----+
+	//     |    |    |    |    |    |    |    |AAAA|
+	//     |    |    |    |    |    |BBBB|BBBB|    |
+	//     |    |    |    |    |CCCC|    |    |    |
+	//     |    |    |    |DDDD|    |    |    |    |
+	//     |    |    | EEE|    |    |    |    |    |
+	//     |    |    |F   |    |    |    |    |    |
+	//     |    |   G|    |    |    |    |    |    |
+	//     |    |  H |    |    |    |    |    |    |
+	//     +----+----+----+----+----+----+----+----+
+	//     |1098|7654|3210|9876|5432|1098|7654|3210|
+	//     +----+----+----+----+----+----+----+----+
+	//
+	// +---+-------+--------------+--------------------------------------------+
+	// | # | bits  |   contains   | values                                     |
+	// +---+-------+--------------+--------------------------------------------+
+	// | A | 00-03 | PCB Revision | (the pcb revision number)                  |
+	// | B | 04-11 | Model name   | A, B, A+, B+, B Pi2, Alpha, Compute Module |
+	// |   |       |              | unknown, B Pi3, Zero                       |
+	// | C | 12-15 | Processor    | BCM2835, BCM2836, BCM2837                  |
+	// | D | 16-19 | Manufacturer | Sony, Egoman, Embest, unknown, Embest      |
+	// | E | 20-22 | Memory size  | 256 MB, 512 MB, 1024 MB                    |
+	// | F | 23-23 | encoded flag | (if set, revision is a bit field)          |
+	// | G | 24-24 | waranty bit  | (if set, warranty void - Pre Pi2)          |
+	// | H | 25-25 | waranty bit  | (if set, warranty void - Post Pi2)         |
+	// +---+-------+--------------+--------------------------------------------+
+	//
+	// Also, due to some early issues the warranty bit has been move from bit
+	// 24 to bit 25 of the revision number (i.e. 0x2000000).
+
+}
