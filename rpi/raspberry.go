@@ -129,7 +129,9 @@ func Init() (err error) {
 		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC, 0660) //|os.O_CLOEXEC
 if err != nil {
 		return errors.New("can not open /dev/mem or /dev/gpiomem, maybe try sudo")
-	}}
+	}
+
+}
 
 
 
