@@ -7,12 +7,17 @@ import (
 	"github.com/flyingyizi/go-wiringPi/rpi"
 )
 
+//go build -gcflags "-N -l"  blink.go
+
 // LED Pin - BCM_GPIO 17.
 const LED int = 17
 
 func main() {
 	fmt.Println("Raspberry Pi blink")
-	err := rpi.Init()
+
+	pcbrev, bmodel, processor, manufacturer, ram, bWarranty, err := rpi.Boardinfo()
+	fmt.Println("%i,%i,%i,%i,%i,%i", pcbrev, bmodel, processor, manufacturer, ram, bWarranty)
+	err = rpi.Init()
 	if err != nil {
 		fmt.Println(err.Error())
 	}

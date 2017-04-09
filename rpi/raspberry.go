@@ -334,7 +334,10 @@ func piGPIOLayout() (err error) {
 	}
 	return ErrHardWare
 }
-
+func Boardinfo() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
+	pcbrev, bmodel, processor, manufacturer, ram, bWarranty, err = piBoardId()
+	return
+}
 func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
 
 	str := `Unable to determine boardinfo. If this is not a Raspberry Pi then you 
@@ -345,7 +348,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		err = ErrRevision
-		return 
+		return
 
 	}
 	lines := strings.Split(string(cpuinfo), "\n")
@@ -374,7 +377,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	i, err := strconv.ParseUint(revisionValue, 16, 32)
 	revision := (uint)(i)
 	if err != nil {
-		return 
+		return
 	}
 
 	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
@@ -484,7 +487,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 
 	}
 
-	return 
+	return
 
 	//-------------------------------------------------------------------------
 	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
