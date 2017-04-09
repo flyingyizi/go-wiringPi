@@ -361,9 +361,8 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 			value := strings.TrimSpace(fields[1])
 			fmt.Println(key, "", value)
 			if key == "Revision" {
-				//ErrRevision = nil
-				fmt.Println("------>", key, value)
-				//revisionValue = value
+				ErrRevision = nil
+				revisionValue = value
 				break
 			}
 		}

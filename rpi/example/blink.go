@@ -16,7 +16,7 @@ func main() {
 	fmt.Println("Raspberry Pi blink")
 
 	pcbrev, bmodel, processor, manufacturer, ram, bWarranty, err := rpi.Boardinfo()
-	fmt.Println("%i,%i,%i,%i,%i,%i", pcbrev, bmodel, processor, manufacturer, ram, bWarranty)
+	fmt.Println( pcbrev, bmodel, processor, manufacturer, ram, bWarranty)
 	err = rpi.Init()
 	if err != nil {
 		fmt.Println(err.Error())
