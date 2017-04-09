@@ -353,7 +353,8 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 
 	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
 	if err != nil {
-		return 0, 0, 0, 0, 0, 0, ErrRevision
+		err = ErrRevision
+		return 
 
 	}
 	lines := strings.Split(string(cpuinfo), "\n")
@@ -382,7 +383,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	i, err := strconv.ParseUint(revisionValue, 16, 32)
 	revision := (uint)(i)
 	if err != nil {
-		return 0, 0, 0, 0, 0, 0, err
+		return 
 	}
 
 	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
@@ -492,7 +493,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 
 	}
 
-	return pcbrev, bmodel, processor, manufacturer, ram, bWarranty, ErrRevision
+	return 
 
 	//-------------------------------------------------------------------------
 	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
