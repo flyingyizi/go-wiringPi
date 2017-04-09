@@ -32,6 +32,25 @@ const RPI_MODEL_ZERO uint = 9    //   "Pi Zero",	// 09
 const RPI_MODEL_CM3 uint = 10    //   "CM3",	// 10
 const RPI_MODEL_ZERO_W uint = 12 //   "Pi Zero-W",	// 12
 
+
+
+	var RaspberryModel = map[uint]string{
+RPI_MODEL_A  :   "Model A",	//  0      
+RPI_MODEL_B  :   "Model B",	//  1      
+RPI_MODEL_A_PLUS :  "Model A+",	//  2  
+RPI_MODEL_B_PLUS :  "Model B+",	//  3  
+RPI_MODEL_2B     :     //   "Pi 2",	// 
+RPI_MODEL_ALPHA : "Alpha",	//  5      
+RPI_MODEL_CM    :     "CM",		//  6    
+RPI_MODEL_UNKNOWN : "Unknown07",	// 07
+RPI_MODEL_3B      :    "Pi 3",	// 08  
+RPI_MODEL_ZERO    :   "Pi Zero",	// 09
+RPI_MODEL_CM3     :   "CM3",	// 10    
+RPI_MODEL_ZERO_W  : "Pi Zero-W",	// 12
+	}
+
+
+
 const RPI_VERSION_1 uint = 0
 const RPI_VERSION_1_1 uint = 1
 const RPI_VERSION_1_2 uint = 2
@@ -124,7 +143,7 @@ func Init() (err error) {
 	defer file.Close()
 
 	_, bmodel, _, _, _, _, err := piBoardId()
-  fmt.Println("modes is %i", bmodel)
+  fmt.Println("modes is %s", RaspberryModel[bmodel])
 
 	if bmodel == RPI_MODEL_A || bmodel == RPI_MODEL_B || bmodel == RPI_MODEL_A_PLUS || bmodel == RPI_MODEL_B_PLUS || bmodel == RPI_MODEL_ALPHA || bmodel == RPI_MODEL_CM || bmodel == RPI_MODEL_ZERO || bmodel == RPI_MODEL_ZERO_W {
 		// piGpioBase:
