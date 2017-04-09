@@ -4,6 +4,7 @@ package rpi
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-	"fmt"
 )
 
 //http://xillybus.com/tutorials/device-tree-zynq-1
@@ -32,24 +32,20 @@ const RPI_MODEL_ZERO uint = 9    //   "Pi Zero",	// 09
 const RPI_MODEL_CM3 uint = 10    //   "CM3",	// 10
 const RPI_MODEL_ZERO_W uint = 12 //   "Pi Zero-W",	// 12
 
-
-
-	var RaspberryModel = map[uint]string{
-RPI_MODEL_A  :   "Model A",	//  0      
-RPI_MODEL_B  :   "Model B",	//  1      
-RPI_MODEL_A_PLUS :  "Model A+",	//  2  
-RPI_MODEL_B_PLUS :  "Model B+",	//  3  
-RPI_MODEL_2B     :     //   "Pi 2",	// 
-RPI_MODEL_ALPHA : "Alpha",	//  5      
-RPI_MODEL_CM    :     "CM",		//  6    
-RPI_MODEL_UNKNOWN : "Unknown07",	// 07
-RPI_MODEL_3B      :    "Pi 3",	// 08  
-RPI_MODEL_ZERO    :   "Pi Zero",	// 09
-RPI_MODEL_CM3     :   "CM3",	// 10    
-RPI_MODEL_ZERO_W  : "Pi Zero-W",	// 12
-	}
-
-
+var RaspberryModel = map[uint]string{
+	RPI_MODEL_A:       "Model A",   //  0
+	RPI_MODEL_B:       "Model B",   //  1
+	RPI_MODEL_A_PLUS:  "Model A+",  //  2
+	RPI_MODEL_B_PLUS:  "Model B+",  //  3
+	RPI_MODEL_2B:      "Pi 2",      //
+	RPI_MODEL_ALPHA:   "Alpha",     //  5
+	RPI_MODEL_CM:      "CM",        //  6
+	RPI_MODEL_UNKNOWN: "Unknown07", // 07
+	RPI_MODEL_3B:      "Pi 3",      // 08
+	RPI_MODEL_ZERO:    "Pi Zero",   // 09
+	RPI_MODEL_CM3:     "CM3",       // 10
+	RPI_MODEL_ZERO_W:  "Pi Zero-W", // 12
+}
 
 const RPI_VERSION_1 uint = 0
 const RPI_VERSION_1_1 uint = 1
@@ -66,17 +62,15 @@ const uint32BlockSize = 4 * 1024
 var (
 	gpioArry []uint32
 	pwmArry  []uint32
-	clkArr   []uint32
+	clkArry  []uint32
 	padsArry []uint32
 
 	memlock sync.Mutex
 
-  gpio  []byte
-  clk   []byte
-  pwm   []byte
-  pads  []byte
-
-
+	gpio []byte
+	clk  []byte
+	pwm  []byte
+	pads []byte
 )
 
 type Pull uint8
@@ -92,7 +86,7 @@ type Pin uint8
 
 // Set pin as Input
 func (pin Pin) Input() {
-	PinMode(pin, 0)
+	gpiopinMode(pin, 0)
 }
 
 // Set pin as Output
@@ -102,7 +96,7 @@ func (pin Pin) Output() {
 
 // Set pin High
 func (pin Pin) High() {
-	WritePin(pin, 1)
+	gpioWritePin(pin, 1)
 }
 
 // Set pin Low
@@ -110,21 +104,18 @@ func (pin Pin) Low() {
 	gpioWritePin(pin, 0)
 }
 
-
 // Close unmaps GPIO memory
-func Close() err error {
+func Close() (err error) {
 	memlock.Lock()
 	defer memlock.Unlock()
-	
-  err = syscall.Munmap(gpio)
+
+	err = syscall.Munmap(gpio)
 	err = syscall.Munmap(pwm)
 	err = syscall.Munmap(clk)
 	err = syscall.Munmap(pads)
-  return 
+	return
 
 }
-
-
 
 func Init() (err error) {
 	// piGpioBase:
@@ -137,13 +128,13 @@ func Init() (err error) {
 	if err != nil {
 		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC, 0660) //|os.O_CLOEXEC
 
-		return errors.New("can not open /dev/mem  or /dev/gpiomem, maybe try sudo")
+		return errors.New("can not open /dev/mem or /dev/gpiomem, maybe try sudo")
 	}
 	//fd can be closed after memory mapping
 	defer file.Close()
 
 	_, bmodel, _, _, _, _, err := piBoardId()
-  fmt.Println("modes is %s", RaspberryModel[bmodel])
+	fmt.Println("modes is %s", RaspberryModel[bmodel])
 
 	if bmodel == RPI_MODEL_A || bmodel == RPI_MODEL_B || bmodel == RPI_MODEL_A_PLUS || bmodel == RPI_MODEL_B_PLUS || bmodel == RPI_MODEL_ALPHA || bmodel == RPI_MODEL_CM || bmodel == RPI_MODEL_ZERO || bmodel == RPI_MODEL_ZERO_W {
 		// piGpioBase:
@@ -160,7 +151,7 @@ func Init() (err error) {
 	GPIO_BASE := piGpioBase + 0x00200000
 	//GPIO_TIMER := piGpioBase + 0x0000B000
 	GPIO_PWM := piGpioBase + 0x0020C000
-var err
+
 	//	GPIO:
 	gpio, err = syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
@@ -198,14 +189,14 @@ var err
 }
 
 // Read the state(0:low, 1:high) of a pin
-func (pin Pin) ReadPin() int {
+func gpioReadPin(pin Pin) int {
 	// Input level register offset (13 / 14 depending on bank)
 	//In the datasheet on page 96, we seet that the GPLEVn register is
 	//located 13 or 14 32-bit registers further than the gpio base register. GPLEV0 STORE 0~31,GPLEV1 STORE 32~53,
 
 	levelReg := uint8(pin)/32 + 13
 
-	if (gpioArray[levelReg] & (1 << uint8(pin))) != 0 {
+	if (gpioArry[levelReg] & (1 << uint8(pin))) != 0 {
 		return 1
 	}
 
@@ -214,7 +205,7 @@ func (pin Pin) ReadPin() int {
 
 // Toggle a pin state (high -> low -> high)
 func (pin Pin) TogglePin() {
-	switch Pin.ReadPin() {
+	switch gpioReadPin(pin) {
 	case 0:
 		pin.High()
 	default:
@@ -237,14 +228,14 @@ func gpiopinMode(pin Pin, direction int) {
 	defer memlock.Unlock()
 
 	if direction == 0 {
-		gpioArray[fsel] = gpioArray[fsel] &^ (7 << shift) //7:0b111 - pinmode is 3 bits
+		gpioArry[fsel] = gpioArry[fsel] &^ (7 << shift) //7:0b111 - pinmode is 3 bits
 	} else {
 		//This is also the reason that the comment says to "always use INP_GPIO(x) before using
 		//OUT_GPIO(x)". This way you are sure that the other 2 bits are 0, and justifies the
 		//use of a OR operation here. If you don't do that, you are not sure those bits will
 		//be zero and you might have given the pin "g" a different setup.
-		gpioArray[fsel] = gpioArray[fsel] &^ (7 << shift)
-		gpioArray[fsel] = (gpioArray[fsel] &^ (7 << shift)) | (1 << shift)
+		gpioArry[fsel] = gpioArry[fsel] &^ (7 << shift)
+		gpioArry[fsel] = (gpioArry[fsel] &^ (7 << shift)) | (1 << shift)
 	}
 
 	//#define INP_GPIO(g)   *(gpio.addr + ((g)/10)) &= ~(7<<(((g)%10)*3))
@@ -270,9 +261,9 @@ func gpioWritePin(pin Pin, state int) {
 	defer memlock.Unlock()
 
 	if state == 0 {
-		gpioArray[clearReg] = 1 << (p & 31)
+		gpioArry[clearReg] = 1 << (p & 31)
 	} else {
-		gpioArray[setReg] = 1 << (p & 31)
+		gpioArry[setReg] = 1 << (p & 31)
 	}
 
 }
@@ -288,21 +279,21 @@ func gpioPullMode(pin Pin, pull Pull) {
 
 	switch pull {
 	case PullDown, PullUp:
-		gpioArray[pullReg] = gpioArray[pullReg]&^3 | uint32(pull)
+		gpioArry[pullReg] = gpioArry[pullReg]&^3 | uint32(pull)
 	case PullOff:
-		gpioArray[pullReg] = gpioArray[pullReg] &^ 3
+		gpioArry[pullReg] = gpioArry[pullReg] &^ 3
 	}
 
 	// Wait for value to clock in, this is ugly, sorry :(
 	time.Sleep(time.Microsecond)
 
-	gpioArray[pullClkReg] = 1 << shift
+	gpioArry[pullClkReg] = 1 << shift
 
 	// Wait for value to clock in
 	time.Sleep(time.Microsecond)
 
-	gpioArray[pullReg] = gpioArray[pullReg] &^ 3
-	gpioArray[pullClkReg] = 0
+	gpioArry[pullReg] = gpioArry[pullReg] &^ 3
+	gpioArry[pullClkReg] = 0
 
 }
 

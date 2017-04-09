@@ -1,25 +1,28 @@
-package rpi_test
+package main
 
 import (
 	"fmt"
 	"time"
 
-	_ "github.com/flyingyizi/go-wiringPi/rpi/raspberry.go"
+	"github.com/flyingyizi/go-wiringPi/rpi"
 )
 
 // LED Pin - BCM_GPIO 17.
 const LED int = 17
 
-func Example_blink() {
+func main() {
 	fmt.Println("Raspberry Pi blink")
-	rpi.Init()
+	err := rpi.Init()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	defer rpi.Close()
 	pin := rpi.Pin(4)
 	pin.Output()
 	for {
-		pin.Toggle()
+		pin.TogglePin()
 		time.Sleep(time.Second)
 	}
 
-	//// Output: Raspberry Pi blink
+	// Output: Raspberry Pi blink
 }
