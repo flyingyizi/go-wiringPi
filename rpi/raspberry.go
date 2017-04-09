@@ -1,6 +1,6 @@
 //+build linux
 
-package wiringPi
+package rpi
 
 import (
 	"errors"
@@ -8,9 +8,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 	"unsafe"
+	"fmt"
 )
+
+//http://xillybus.com/tutorials/device-tree-zynq-1
+//https://github.com/stianeikeland/go-rpio/blob/master/rpio.go
 
 // Raspberry Pi Revision :: Model
 const RPI_MODEL_A uint = 0       //   "Model A",	//  0
@@ -43,7 +49,63 @@ var (
 	pwmArry  []uint32
 	clkArr   []uint32
 	padsArry []uint32
+
+	memlock sync.Mutex
+
+  gpio  []byte
+  clk   []byte
+  pwm   []byte
+  pads  []byte
+
+
 )
+
+type Pull uint8
+
+// Pull Up / Down / Off
+const (
+	PullOff Pull = iota
+	PullDown
+	PullUp
+)
+
+type Pin uint8
+
+// Set pin as Input
+func (pin Pin) Input() {
+	PinMode(pin, 0)
+}
+
+// Set pin as Output
+func (pin Pin) Output() {
+	gpiopinMode(pin, 1)
+}
+
+// Set pin High
+func (pin Pin) High() {
+	WritePin(pin, 1)
+}
+
+// Set pin Low
+func (pin Pin) Low() {
+	gpioWritePin(pin, 0)
+}
+
+
+// Close unmaps GPIO memory
+func Close() err error {
+	memlock.Lock()
+	defer memlock.Unlock()
+	
+  err = syscall.Munmap(gpio)
+	err = syscall.Munmap(pwm)
+	err = syscall.Munmap(clk)
+	err = syscall.Munmap(pads)
+  return 
+
+}
+
+
 
 func Init() (err error) {
 	// piGpioBase:
@@ -62,6 +124,7 @@ func Init() (err error) {
 	defer file.Close()
 
 	_, bmodel, _, _, _, _, err := piBoardId()
+  fmt.Println("modes is %i", bmodel)
 
 	if bmodel == RPI_MODEL_A || bmodel == RPI_MODEL_B || bmodel == RPI_MODEL_A_PLUS || bmodel == RPI_MODEL_B_PLUS || bmodel == RPI_MODEL_ALPHA || bmodel == RPI_MODEL_CM || bmodel == RPI_MODEL_ZERO || bmodel == RPI_MODEL_ZERO_W {
 		// piGpioBase:
@@ -78,9 +141,9 @@ func Init() (err error) {
 	GPIO_BASE := piGpioBase + 0x00200000
 	//GPIO_TIMER := piGpioBase + 0x0000B000
 	GPIO_PWM := piGpioBase + 0x0020C000
-
+var err
 	//	GPIO:
-	gpio, err := syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
+	gpio, err = syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (GPIO) failed")
@@ -88,7 +151,7 @@ func Init() (err error) {
 	i := (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&gpio[0]))
 	gpioArry = i[:]
 	//	PWM
-	pwm, err := syscall.Mmap(int(file.Fd()), GPIO_PWM, uint32BlockSize,
+	pwm, err = syscall.Mmap(int(file.Fd()), GPIO_PWM, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (PWM) failed")
@@ -97,15 +160,15 @@ func Init() (err error) {
 	pwmArry = i[:]
 
 	//	Clock control (needed for PWM)
-	clk, err := syscall.Mmap(int(file.Fd()), GPIO_CLOCK_BASE, uint32BlockSize,
+	clk, err = syscall.Mmap(int(file.Fd()), GPIO_CLOCK_BASE, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (CLOCK) failed")
 	}
 	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&clk[0]))
-	clkArr = i[:]
+	clkArry = i[:]
 	//	The drive pads
-	pads, err := syscall.Mmap(int(file.Fd()), GPIO_PADS, uint32BlockSize,
+	pads, err = syscall.Mmap(int(file.Fd()), GPIO_PADS, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (PADS) failed")
@@ -115,50 +178,114 @@ func Init() (err error) {
 	return
 }
 
-/*
+// Read the state(0:low, 1:high) of a pin
+func (pin Pin) ReadPin() int {
+	// Input level register offset (13 / 14 depending on bank)
+	//In the datasheet on page 96, we seet that the GPLEVn register is
+	//located 13 or 14 32-bit registers further than the gpio base register. GPLEV0 STORE 0~31,GPLEV1 STORE 32~53,
 
+	levelReg := uint8(pin)/32 + 13
 
- digitalRead:
-	Read the value of a given Pin, returning HIGH or LOW
- *********************************************************************************
+	if (gpioArray[levelReg] & (1 << uint8(pin))) != 0 {
+		return 1
+	}
 
-
-int digitalRead (int pin)
-{
-  char c ;
-  struct wiringPiNodeStruct *node = wiringPiNodes ;
-
-  if ((pin & PI_GPIO_MASK) == 0)		// On-Board Pin
-  {
-    if (wiringPiMode == WPI_MODE_GPIO_SYS)	// Sys mode
-    {
-      if (sysFds [pin] == -1)
-	return LOW ;
-
-      lseek  (sysFds [pin], 0L, SEEK_SET) ;
-      read   (sysFds [pin], &c, 1) ;
-      return (c == '0') ? LOW : HIGH ;
-    }
-    else if (wiringPiMode == WPI_MODE_PINS)
-      pin = pinToGpio [pin] ;
-    else if (wiringPiMode == WPI_MODE_PHYS)
-      pin = physToGpio [pin] ;
-    else if (wiringPiMode != WPI_MODE_GPIO)
-      return LOW ;
-
-    if ((*(gpio + gpioToGPLEV [pin]) & (1 << (pin & 31))) != 0)
-      return HIGH ;
-    else
-      return LOW ;
-  }
-  else
-  {
-    if ((node = wiringPiFindNode (pin)) == NULL)
-      return LOW ;
-    return node->digitalRead (node, pin) ;
-  }
+	return 0
 }
-*/
+
+// Toggle a pin state (high -> low -> high)
+func (pin Pin) TogglePin() {
+	switch Pin.ReadPin() {
+	case 0:
+		pin.High()
+	default:
+		pin.Low()
+	}
+}
+
+// gpiopinMode sets the direction of a given pin (Input(0) or Output(1))
+func gpiopinMode(pin Pin, direction int) {
+
+	//In the datasheet at page 91 we find that the GPFSEL registers are organised per 10 pins.
+	//So one 32-bit register contains the setup bits for 10 pins. *gpio.addr + ((g))/10 is
+	// the register address that contains the GPFSEL bits of the pin "g"
+	// Pin fsel register, 0 or 1 depending on bank
+	fsel := uint8(pin) / 10
+	//There are three GPFSEL bits per pin (000: input, 001: output). The location
+	//of these three bits inside the GPFSEL register is given by ((g)%10)*3
+	shift := (uint8(pin) % 10) * 3
+	memlock.Lock()
+	defer memlock.Unlock()
+
+	if direction == 0 {
+		gpioArray[fsel] = gpioArray[fsel] &^ (7 << shift) //7:0b111 - pinmode is 3 bits
+	} else {
+		//This is also the reason that the comment says to "always use INP_GPIO(x) before using
+		//OUT_GPIO(x)". This way you are sure that the other 2 bits are 0, and justifies the
+		//use of a OR operation here. If you don't do that, you are not sure those bits will
+		//be zero and you might have given the pin "g" a different setup.
+		gpioArray[fsel] = gpioArray[fsel] &^ (7 << shift)
+		gpioArray[fsel] = (gpioArray[fsel] &^ (7 << shift)) | (1 << shift)
+	}
+
+	//#define INP_GPIO(g)   *(gpio.addr + ((g)/10)) &= ~(7<<(((g)%10)*3))
+	//#define OUT_GPIO(g)   *(gpio.addr + ((g)/10)) |=  (1<<(((g)%10)*3))
+}
+
+// gpioWritePin sets a given pin High(1) or Low(0)
+// by setting the clear or set registers respectively
+func gpioWritePin(pin Pin, state int) {
+
+	p := uint8(pin)
+
+	// Clear register, 10 / 11 depending on bank
+	// Set register, 7 / 8 depending on bank
+	//In the datasheet on page 90, we seet that the GPSET register is
+	//located 10 32-bit registers further than the gpio base register. GPCLR0 STORE 0~31,GPCLR1 STORE 32~53,
+	clearReg := p/32 + 10
+	//In the datasheet on page 90, we seet that the GPSET register is
+	//located 7 32-bit registers further than the gpio base register. GPSET0 STORE 0~31,GPSET1 STORE 32~53,
+	setReg := p/32 + 7
+
+	memlock.Lock()
+	defer memlock.Unlock()
+
+	if state == 0 {
+		gpioArray[clearReg] = 1 << (p & 31)
+	} else {
+		gpioArray[setReg] = 1 << (p & 31)
+	}
+
+}
+
+func gpioPullMode(pin Pin, pull Pull) {
+	// Pull up/down/off register has offset 38 / 39, pull is 37
+	pullClkReg := uint8(pin)/32 + 38
+	pullReg := 37
+	shift := (uint8(pin) % 32) // get 0 or 1 bank
+
+	memlock.Lock()
+	defer memlock.Unlock()
+
+	switch pull {
+	case PullDown, PullUp:
+		gpioArray[pullReg] = gpioArray[pullReg]&^3 | uint32(pull)
+	case PullOff:
+		gpioArray[pullReg] = gpioArray[pullReg] &^ 3
+	}
+
+	// Wait for value to clock in, this is ugly, sorry :(
+	time.Sleep(time.Microsecond)
+
+	gpioArray[pullClkReg] = 1 << shift
+
+	// Wait for value to clock in
+	time.Sleep(time.Microsecond)
+
+	gpioArray[pullReg] = gpioArray[pullReg] &^ 3
+	gpioArray[pullClkReg] = 0
+
+}
 
 func piGPIOLayout() (err error) {
 	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
@@ -199,7 +326,7 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	str := `Unable to determine boardinfo. If this is not a Raspberry Pi then you 
     are on your own as wiringPi is designed to support the 
     Raspberry Pi ONLY.\n`
-	var ErrRevision error = errors.New(str)
+	var ErrRevision = errors.New(str)
 
 	cpuinfo, err := ioutil.ReadFile("/proc/cpuinfo")
 	if err != nil {
