@@ -354,14 +354,18 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	lines := strings.Split(string(cpuinfo), "\n")
 
 	revisionValue := ""
-	for _, line := range lines {
-		fields := strings.Split(line, ":")
-		key := strings.TrimSpace(fields[0])
-		value := strings.TrimSpace(fields[1])
-		if key == "Revision" {
-			ErrRevision = nil
-			revisionValue = value
-			break
+	for _, l := range lines {
+		fields := strings.Split(l, ":")
+		if len(fields) == 2 {
+			key := strings.TrimSpace(fields[0])
+			value := strings.TrimSpace(fields[1])
+			fmt.Println(key, "", value)
+			if key == "Revision" {
+				//ErrRevision = nil
+				fmt.Println("------>", key, value)
+				//revisionValue = value
+				break
+			}
 		}
 		//unicode.IsNumber
 	}
