@@ -377,7 +377,7 @@ func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	if ErrRevision != nil {
 		return 0, 0, 0, 0, 0, 0, ErrRevision
 	}
-
+	fmt.Println("revision orig:", revisionValue)
 	// get scheme
 	var scheme uint = 0
 	var revision uint = 0
@@ -387,6 +387,7 @@ func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 		revision = uint(i)
 		scheme = (revision & (1 << 23)) >> 23
 	}
+	fmt.Println("revision decode", revision)
 
 	if scheme > 0 {
 		pcbrev = (revision & (0x0F << 0)) >> 0
