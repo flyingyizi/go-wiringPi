@@ -344,6 +344,11 @@ func piGPIOLayout() (err error) {
 }
 
 func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
+	/*  if ( (strcmp (c, "0002") == 0) || (strcmp (c, "0003") == 0))
+	      gpioLayout = 1 ;
+	    else
+	      gpioLayout = 2 ;	// Covers everything else from the B revision 2 to the B+, the Pi v2, v3, zero and CM's.
+	*/
 
 	str := `Unable to determine boardinfo. If this is not a Raspberry Pi then you 
     are on your own as wiringPi is designed to support the 
@@ -375,22 +380,15 @@ func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 		return 0, 0, 0, 0, 0, 0, ErrRevision
 	}
 
-	// If longer than 4, we'll assume it's been overvolted
-	if len(revisionValue) > 4 {
-		bWarranty = 1
-		// Extract last 4 characters
-		revisionValue = revisionValue[len(revisionValue)-4:]
-	}
-
-	// Hex number with no leading 0x
-	i, err := strconv.ParseUint(revisionValue, 16, 32)
-	revision := (uint)(i)
+	// get scheme
+	var scheme uint = 0
+	var revision uint = 0
+	i, err := strconv.ParseUint(revisionValue, 16, 32) // Hex number with no leading 0x
 	if err != nil {
-		return
+		// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
+		revision = uint(i)
+		scheme = (revision & (1 << 23)) >> 23
 	}
-
-	// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
-	scheme := (revision & (1 << 23)) >> 23
 
 	if scheme > 0 {
 		pcbrev = (revision & (0x0F << 0)) >> 0
@@ -401,6 +399,12 @@ func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 		bWarranty = (revision & (0x03 << 24)) >> 24
 
 	} else {
+		// If longer than 4, we'll assume it's been overvolted
+		if len(revisionValue) > 4 {
+			bWarranty = 1
+			// Extract last 4 characters
+			revisionValue = revisionValue[len(revisionValue)-4:]
+		}
 		switch revisionValue {
 		case "0002":
 			bmodel = RPI_MODEL_B
