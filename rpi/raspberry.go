@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,7 +58,8 @@ const RPI_MAKER_EGOMAN uint = 1
 const RPI_MAKER_EMBEST uint = 2
 const RPI_MAKER_UNKNOWN uint = 3
 
-const uint32BlockSize = 4 * 1024
+const SIZEOF_UINT32 = 4 // bytes
+const uint32BlockSize = SIZEOF_UINT32 * 1024
 
 var (
 	gpioArry []uint32
@@ -117,29 +119,27 @@ func Close() (err error) {
 
 }
 
+func BytesToUint32Slince(b []byte) (data []uint32) {
+	// Get the slice header
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&b))
+
+	// The length and capacity of the slice are different.
+	header.Len /= SIZEOF_UINT32
+	header.Cap /= SIZEOF_UINT32
+
+	// Convert slice header to an []uint32
+	data = *(*[]uint32)(unsafe.Pointer(&header))
+	return
+}
+
 func Init() (err error) {
-	// piGpioBase:
-	//	The base address of the GPIO memory mapped hardware IO
-	piGpioBase := int64(0x20000000)
-
-	//	Try /dev/mem. If that fails, then
-	//	try /dev/gpiomem. If that fails then game over.
-	file, err := os.OpenFile("/dev/mem", os.O_RDWR|os.O_SYNC, 0660)
-	if err != nil {
-		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC, 0660) //|os.O_CLOEXEC
-		if err != nil {
-
-			return errors.New("can not open /dev/mem or /dev/gpiomem, maybe try sudo")
-		}
-
-	}
 
 	//fd can be closed after memory mapping
 	defer file.Close()
 
-	_, bmodel, _, _, _, _, err := piBoardId()
+	_, bmodel, _, _, _, _, err := PiBoardId()
 	fmt.Println("modes is %s", RaspberryModel[bmodel])
-
+	var piGpioBase int64 = 0x20000000
 	if bmodel == RPI_MODEL_A || bmodel == RPI_MODEL_B || bmodel == RPI_MODEL_A_PLUS || bmodel == RPI_MODEL_B_PLUS || bmodel == RPI_MODEL_ALPHA || bmodel == RPI_MODEL_CM || bmodel == RPI_MODEL_ZERO || bmodel == RPI_MODEL_ZERO_W {
 		// piGpioBase:
 		//	The base address of the GPIO memory mapped hardware IO
@@ -156,22 +156,31 @@ func Init() (err error) {
 	//GPIO_TIMER := piGpioBase + 0x0000B000
 	GPIO_PWM := piGpioBase + 0x0020C000
 
+	//	Try /dev/mem. If that fails, then
+	//	try /dev/gpiomem. If that fails then game over.
+	file, err := os.OpenFile("/dev/mem", os.O_RDWR|os.O_SYNC, 0660)
+	if err != nil {
+		file, err = os.OpenFile("/dev/gpiomem", os.O_RDWR|os.O_SYNC, 0660) //|os.O_CLOEXEC
+		if err != nil {
+			return errors.New("can not open /dev/mem or /dev/gpiomem, maybe try sudo")
+		}
+	}
+
 	//	GPIO:
 	gpio, err = syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (GPIO) failed")
 	}
-	i := (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&gpio[0]))
-	gpioArry = i[:]
+	gpioArry = BytesToUint32Slince(gpio)
+
 	//	PWM
 	pwm, err = syscall.Mmap(int(file.Fd()), GPIO_PWM, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (PWM) failed")
 	}
-	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&pwm[0]))
-	pwmArry = i[:]
+	pwmArry = BytesToUint32Slince(pwm)
 
 	//	Clock control (needed for PWM)
 	clk, err = syscall.Mmap(int(file.Fd()), GPIO_CLOCK_BASE, uint32BlockSize,
@@ -179,16 +188,15 @@ func Init() (err error) {
 	if err != nil {
 		return errors.New("mmap (CLOCK) failed")
 	}
-	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&clk[0]))
-	clkArry = i[:]
+	clkArry = BytesToUint32Slince(clk)
+
 	//	The drive pads
 	pads, err = syscall.Mmap(int(file.Fd()), GPIO_PADS, uint32BlockSize,
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		return errors.New("mmap (PADS) failed")
 	}
-	i = (*[uint32BlockSize / 4]uint32)(unsafe.Pointer(&pads[0]))
-	padsArry = i[:]
+	padsArry = BytesToUint32Slince(pads)
 	return
 }
 
@@ -334,11 +342,8 @@ func piGPIOLayout() (err error) {
 	}
 	return ErrHardWare
 }
-func Boardinfo() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
-	pcbrev, bmodel, processor, manufacturer, ram, bWarranty, err = piBoardId()
-	return
-}
-func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
+
+func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, ram uint, bWarranty uint, err error) {
 
 	str := `Unable to determine boardinfo. If this is not a Raspberry Pi then you 
     are on your own as wiringPi is designed to support the 
@@ -359,14 +364,15 @@ func piBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 		if len(fields) == 2 {
 			key := strings.TrimSpace(fields[0])
 			value := strings.TrimSpace(fields[1])
-			fmt.Println(key, "", value)
 			if key == "Revision" {
 				ErrRevision = nil
 				revisionValue = value
 				break
 			}
 		}
-		//unicode.IsNumber
+	}
+	if ErrRevision != nil {
+		return 0, 0, 0, 0, 0, 0, ErrRevision
 	}
 
 	// If longer than 4, we'll assume it's been overvolted
