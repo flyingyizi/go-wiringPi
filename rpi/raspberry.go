@@ -133,10 +133,6 @@ func BytesToUint32Slince(b []byte) (data []uint32) {
 }
 
 func Init() (err error) {
-
-	//fd can be closed after memory mapping
-	defer file.Close()
-
 	_, bmodel, _, _, _, _, err := PiBoardId()
 	fmt.Println("modes is %s", RaspberryModel[bmodel])
 	var piGpioBase int64 = 0x20000000
@@ -165,6 +161,8 @@ func Init() (err error) {
 			return errors.New("can not open /dev/mem or /dev/gpiomem, maybe try sudo")
 		}
 	}
+	//fd can be closed after memory mapping
+	defer file.Close()
 
 	//	GPIO:
 	gpio, err = syscall.Mmap(int(file.Fd()), GPIO_BASE, uint32BlockSize,
