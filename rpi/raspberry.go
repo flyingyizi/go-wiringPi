@@ -380,22 +380,20 @@ func PiBoardId() (pcbrev uint, bmodel uint, processor uint, manufacturer uint, r
 	fmt.Println("revision orig:", revisionValue)
 	// get scheme
 	var scheme uint = 0
-	var revision uint = 0
-	i, err := strconv.ParseUint(revisionValue, 16, 32) // Hex number with no leading 0x
+	revision, err := strconv.ParseUint(revisionValue, 16, 32) // Hex number with no leading 0x
 	if err != nil {
 		// SEE: https://github.com/AndrewFromMelbourne/raspberry_pi_revision
-		revision = uint(i)
-		scheme = (revision & (1 << 23)) >> 23
+		scheme = uint((revision & (1 << 23)) >> 23)
 	}
 	fmt.Println("revision decode", revision)
 
 	if scheme > 0 {
-		pcbrev = (revision & (0x0F << 0)) >> 0
-		bmodel = (revision & (0xFF << 4)) >> 4
-		processor = (revision & (0x0F << 12)) >> 12 // Not used for now.
-		manufacturer = (revision & (0x0F << 16)) >> 16
-		ram = (revision & (0x07 << 20)) >> 20
-		bWarranty = (revision & (0x03 << 24)) >> 24
+		pcbrev = uint((revision & (0x0F << 0)) >> 0)
+		bmodel = uint((revision & (0xFF << 4)) >> 4)
+		processor = uint((revision & (0x0F << 12)) >> 12) // Not used for now.
+		manufacturer = uint((revision & (0x0F << 16)) >> 16)
+		ram = uint((revision & (0x07 << 20)) >> 20)
+		bWarranty = uint((revision & (0x03 << 24)) >> 24)
 
 	} else {
 		// If longer than 4, we'll assume it's been overvolted
