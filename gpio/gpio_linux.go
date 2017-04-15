@@ -1,4 +1,6 @@
-package rpi
+//+build linux
+
+package gpio
 
 import (
 	"errors"
@@ -8,6 +10,8 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+		"github.com/flyingyizi/go-wiringPi/board"
+
 )
 
 const SizeOfuint32 = 4 // bytes
@@ -96,7 +100,7 @@ func bytesToUint32Slince(b []byte) (data []uint32) {
 
 func Init() (err error) {
 
-	_, piGpioBase, err := GetBoardInfo()
+	_, piGpioBase, err := board.GetBoardInfo()
 	if err != nil {
 		return
 	}

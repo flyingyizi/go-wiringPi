@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyingyizi/go-wiringPi/rpi"
+	"github.com/flyingyizi/go-wiringPi/gpio"
 )
 
 //go build -gcflags "-N -l"  blink.go
@@ -14,15 +14,19 @@ const LED int = 17
 
 func main() {
 	fmt.Println("Raspberry Pi blink")
-
-	pcbrev, bmodel, processor, manufacturer, ram, bWarranty, err := rpi.PiBoardId()
-	fmt.Println(pcbrev, bmodel, processor, manufacturer, ram, bWarranty)
-	err = rpi.Init()
+	info, base, err := gpio.GetBoardInfo()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	defer rpi.Close()
-	pin := rpi.Pin(4)
+
+	fmt.Println("modelName:", info.ModelName())
+
+	err = gpio.Init()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer gpio.Close()
+	pin := gpio.Pin(4)
 	pin.Output()
 	for {
 		pin.TogglePin()

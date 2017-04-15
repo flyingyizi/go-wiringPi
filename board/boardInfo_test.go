@@ -1,4 +1,4 @@
-package rpi
+package board
 
 import (
 	"reflect"

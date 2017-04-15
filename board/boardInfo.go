@@ -1,4 +1,4 @@
-package rpi
+package board
 
 import (
 	"bytes"
@@ -77,6 +77,10 @@ type RpiInfoT struct {
 	pcbRev       PcbRevT
 	overVolted   bool //
 	revision     uint64
+}
+
+func (info *RpiInfoT) ModelName() (modelname string) {
+	return ModelName[info.model]
 }
 
 var ModelName = map[ModelT]string{
