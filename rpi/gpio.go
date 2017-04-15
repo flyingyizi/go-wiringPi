@@ -58,6 +58,16 @@ func (pin Pin) Low() {
 	gpioWritePin(pin, 0)
 }
 
+// Toggle a pin state (high -> low -> high)
+func (pin Pin) TogglePin() {
+	switch gpioReadPin(pin) {
+	case 0:
+		pin.High()
+	default:
+		pin.Low()
+	}
+}
+
 // Close unmaps GPIO memory
 func Close() (err error) {
 	memlock.Lock()
@@ -71,7 +81,7 @@ func Close() (err error) {
 
 }
 
-func BytesToUint32Slince(b []byte) (data []uint32) {
+func bytesToUint32Slince(b []byte) (data []uint32) {
 	// Get the slice header
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&b))
 
@@ -116,7 +126,7 @@ func Init() (err error) {
 	if err != nil {
 		return errors.New("mmap (GPIO) failed")
 	}
-	gpioArry = BytesToUint32Slince(gpio)
+	gpioArry = bytesToUint32Slince(gpio)
 
 	//	PWM
 	pwm, err = syscall.Mmap(int(file.Fd()), GPIO_PWM, uint32BlockSize,
@@ -124,7 +134,7 @@ func Init() (err error) {
 	if err != nil {
 		return errors.New("mmap (PWM) failed")
 	}
-	pwmArry = BytesToUint32Slince(pwm)
+	pwmArry = bytesToUint32Slince(pwm)
 
 	//	Clock control (needed for PWM)
 	clk, err = syscall.Mmap(int(file.Fd()), GPIO_CLOCK_BASE, uint32BlockSize,
@@ -132,7 +142,7 @@ func Init() (err error) {
 	if err != nil {
 		return errors.New("mmap (CLOCK) failed")
 	}
-	clkArry = BytesToUint32Slince(clk)
+	clkArry = bytesToUint32Slince(clk)
 
 	//	The drive pads
 	pads, err = syscall.Mmap(int(file.Fd()), GPIO_PADS, uint32BlockSize,
@@ -140,7 +150,7 @@ func Init() (err error) {
 	if err != nil {
 		return errors.New("mmap (PADS) failed")
 	}
-	padsArry = BytesToUint32Slince(pads)
+	padsArry = bytesToUint32Slince(pads)
 	return
 }
 
@@ -157,16 +167,6 @@ func gpioReadPin(pin Pin) int {
 	}
 
 	return 0
-}
-
-// Toggle a pin state (high -> low -> high)
-func (pin Pin) TogglePin() {
-	switch gpioReadPin(pin) {
-	case 0:
-		pin.High()
-	default:
-		pin.Low()
-	}
 }
 
 // gpiopinMode sets the direction of a given pin (Input(0) or Output(1))
