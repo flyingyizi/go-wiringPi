@@ -484,7 +484,6 @@ func GetBoardInfo() (info RpiInfoT, periphereBase int64, err error) {
 
 // Read /proc/device-tree/soc/ranges and determine the base address.
 func get_dt_ranges(filename string) (base int64, err error) {
-	base = pi1GPIOBase
 	ranges, err := os.Open(filename)
 	defer ranges.Close()
 	if err != nil {
@@ -506,4 +505,5 @@ func get_dt_ranges(filename string) (base int64, err error) {
 
 func getPeripheralBase() (base int64, err error) {
 	base, err = get_dt_ranges("/proc/device-tree/soc/ranges")
+	return
 }

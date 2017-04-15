@@ -10,8 +10,8 @@ import (
 	"unsafe"
 )
 
-const SIZEOF_UINT32 = 4 // bytes
-const uint32BlockSize = SIZEOF_UINT32 * 1024
+const SizeOfuint32 = 4 // bytes
+const uint32BlockSize = SizeOfuint32 * 1024
 
 var (
 	gpioArry []uint32
@@ -76,8 +76,8 @@ func BytesToUint32Slince(b []byte) (data []uint32) {
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&b))
 
 	// The length and capacity of the slice are different.
-	header.Len /= SIZEOF_UINT32
-	header.Cap /= SIZEOF_UINT32
+	header.Len /= SizeOfuint32
+	header.Cap /= SizeOfuint32
 
 	// Convert slice header to an []uint32
 	data = *(*[]uint32)(unsafe.Pointer(&header))
@@ -87,6 +87,9 @@ func BytesToUint32Slince(b []byte) (data []uint32) {
 func Init() (err error) {
 
 	_, piGpioBase, err := GetBoardInfo()
+	if err != nil {
+		return
+	}
 
 	// Set the offsets into the memory interface.
 	GPIO_PADS := piGpioBase + 0x00100000

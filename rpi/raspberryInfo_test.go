@@ -61,27 +61,28 @@ func Test_getPreRPI2FromRevision(t *testing.T) {
 	}
 }
 
-func Test_get_dt_ranges(t *testing.T) {
-	type args struct {
-		filename string
-	}
+func TestGetBoardInfo(t *testing.T) {
 	tests := []struct {
-		name     string
-		args     args
-		wantBase int64
-		wantErr  bool
+		name              string
+		wantInfo          RpiInfoT
+		wantPeriphereBase int64
+		wantErr           bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
+		{name: "", wantPeriphereBase: PeripheralBase2837},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotBase, err := get_dt_ranges(tt.args.filename)
+			gotInfo, gotPeriphereBase, err := GetBoardInfo()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("get_dt_ranges() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetBoardInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if gotBase != tt.wantBase {
-				t.Errorf("get_dt_ranges() = %v, want %v", gotBase, tt.wantBase)
+			if !reflect.DeepEqual(gotInfo, tt.wantInfo) {
+				t.Errorf("GetBoardInfo() gotInfo = %v, want %v", gotInfo, tt.wantInfo)
+			}
+			if gotPeriphereBase != tt.wantPeriphereBase {
+				t.Errorf("GetBoardInfo() gotPeriphereBase = %v, want %v", gotPeriphereBase, tt.wantPeriphereBase)
 			}
 		})
 	}
