@@ -10,9 +10,6 @@ import (
 	"strings"
 )
 
-//ref http://xillybus.com/tutorials/device-tree-zynq-1
-//ref  https://github.com/stianeikeland/go-rpio/blob/master/rpio.go
-
 const (
 	PeripheralBaseUnknown int64 = 0
 	PeripheralBase2835    int64 = 0x20000000
@@ -58,6 +55,14 @@ const (
 	Broadcom2837    ProcessorT = 2
 )
 
+type I2CDeviceT int
+
+const (
+	I2C_DeviceUnknown I2CDeviceT = 0
+	I2C_0             I2CDeviceT = 1
+	I2C_1             I2CDeviceT = 2
+)
+
 type MakerT int
 
 const (
@@ -73,6 +78,7 @@ type RpiInfoT struct {
 	model        ModelT
 	mem          MemoryT
 	processor    ProcessorT
+	i2c          I2CDeviceT
 	manufacturer MakerT
 	pcbRev       PcbRevT
 	overVolted   bool //
@@ -81,6 +87,17 @@ type RpiInfoT struct {
 
 func (info *RpiInfoT) ModelName() (modelname string) {
 	return ModelName[info.model]
+}
+func (info *RpiInfoT) I2CDeviceName() (modelname string) {
+	switch info.i2c {
+	case I2C_0:
+		modelname = "/dev/i2c-0"
+	case I2C_1:
+		modelname = "/dev/i2c-1"
+	default:
+		modelname = ""
+	}
+	return
 }
 
 var ModelName = map[ModelT]string{
@@ -205,6 +222,8 @@ func getPreRPI2FromRevision(revision string) (info RpiInfoT, err error) {
 	}
 
 	info.processor = Broadcom2835
+	// except revision "0002"/"0003" is I2C_0
+	info.i2c = I2C_1
 
 	//     +----------+---------+---------+--------+-------------+
 	//     | Revision |  Model  | PCB Rev | Memory | Manufacture |
@@ -218,12 +237,14 @@ func getPreRPI2FromRevision(revision string) (info RpiInfoT, err error) {
 		info.mem = Rpi256MB
 		info.model = ModelB
 		info.pcbRev = PcbRev1
+		info.i2c = I2C_0
 	case "0003":
 		//     |   0003   |    B    |    1-1  | 256 MB |   EGOMAN    |
 		info.manufacturer = MakerEgoman
 		info.mem = Rpi256MB
 		info.model = ModelB
 		info.pcbRev = PcbRev1_1
+		info.i2c = I2C_0
 	case "0004":
 		//     |   0004   |    B    |    1-2  | 256 MB |   Sony      |
 		info.manufacturer = MakerSony
@@ -350,7 +371,9 @@ func getPreRPI2FromRevision(revision string) (info RpiInfoT, err error) {
 		info.mem = RpiUnknownMB
 		info.model = ModelUnknown
 		info.pcbRev = PcbRevUnknown
+		info.i2c = I2C_DeviceUnknown
 	}
+
 	return
 }
 
@@ -458,6 +481,8 @@ func getPostRPI2FromRevision(revision string) (info RpiInfoT, err error) {
 	}
 	info.pcbRev = pcbrevindex
 
+	// except revision "0002"/"0003"
+	info.i2c = I2C_1
 	return
 }
 

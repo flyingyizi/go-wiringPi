@@ -14,9 +14,9 @@ func Test_getPostRPI2FromRevision(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{name: "pi 3", revision: "a22082", wantInfo: RpiInfoT{model: Model3B, mem: Rpi1024MB, processor: Broadcom2837,
-			manufacturer: MakerEmbest, pcbRev: PcbRev1_2, overVolted: false, revision: 0xa22082}, wantErr: false},
+			manufacturer: MakerEmbest, pcbRev: PcbRev1_2, overVolted: false, i2c: I2C_1, revision: 0xa22082}, wantErr: false},
 		{name: "pi B+", revision: "900032", wantInfo: RpiInfoT{model: ModelBPlus, mem: Rpi512MB, processor: Broadcom2835,
-			manufacturer: MakerSony, pcbRev: PcbRev1_2, overVolted: false, revision: 0x900032}, wantErr: false},
+			manufacturer: MakerSony, pcbRev: PcbRev1_2, overVolted: false, i2c: I2C_1, revision: 0x900032}, wantErr: false},
 		{name: "pi B", revision: "0002", wantErr: true},
 	}
 	for _, tt := range tests {
@@ -43,9 +43,7 @@ func Test_getPreRPI2FromRevision(t *testing.T) {
 		// TODO: Add test cases.
 		{name: "pi 3", revision: "a22082", wantErr: true},
 		{name: "pi B", revision: "0002", wantInfo: RpiInfoT{model: ModelB, mem: Rpi256MB, processor: Broadcom2835,
-			manufacturer: MakerEgoman, pcbRev: PcbRev1, overVolted: false, revision: 0x0002}, wantErr: false},
-		{name: "pi B", revision: "0000", wantInfo: RpiInfoT{model: ModelUnknown, mem: RpiUnknownMB, processor: Broadcom2835,
-			manufacturer: MakerEgoman, pcbRev: PcbRev1, overVolted: false, revision: 0x0002}, wantErr: false},
+			manufacturer: MakerEgoman, pcbRev: PcbRev1, overVolted: false, i2c: I2C_0, revision: 0x0002}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
