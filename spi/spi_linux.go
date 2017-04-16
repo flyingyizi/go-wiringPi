@@ -61,7 +61,7 @@ const (
  *	Open the SPI device, and set it up, etc. in the default MODE 0
  *********************************************************************************
  */
-func spiOpen(channel int, model uint8, speed uint32, bpw uint8) (f *os.File, err error) {
+func spiOpen(channel byte, model uint8, speed uint32, bpw uint8) (f *os.File, err error) {
 
 	model &= 3   // Mode is 0, 1, 2 or 3
 	channel &= 1 // Channel is 0 or 1
@@ -248,4 +248,67 @@ type Device struct {
 	delayms int
 
 	mu sync.Mutex
+}
+
+
+func (d *Device) Open(channel byte, model uint8, speed uint32, bpw uint8)  error {
+f, err :=spiOpen(channel byte, model uint8, speed uint32, bpw uint8) (f *os.File, err error) 
+if err !=nil {
+	return
+}
+d.f =f
+d.channel=channel
+d.mode=model
+d.speed=speed
+return
+
+}
+
+
+// TransferAndReceiveData, fistly sending databuffer, then read into data buffer
+func (d *Device) Tx(dataBuffer []uint8) (err error) {
+
+    err =spiTx(d.f, dataBuffer, d.speed, d.bpw) 
+return
+}
+
+
+func (d *Device) Write(data []byte) (n int, err error) {
+	return d.f.Write(data)
+}
+
+
+func (d *Device) ReceiveData(len int) ([]uint8, error) {
+	data := make([]uint8, len)
+	err := d.Tx(data)
+	if  err != nil {
+		return nil, err
+	}
+	return data, err
+}
+
+func (d *Device) TransferAndReceiveByte(data byte) (byte, error) {
+
+	dt := [1]uint8{uint8(data)}
+	if err := d.Tx(dt[:]); err != nil {
+		return 0, err
+	}
+	return d[0], nil
+}
+
+func (d *Device) ReceiveByte() (byte, error) {
+
+	var dt [1]uint8
+	if err := d.Tx(dt[:]); err != nil {
+		return 0, err
+	}
+	return byte(d[0]), nil
+}
+
+
+func (d *Device) Close() error {
+	b.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.f.Close()
 }
