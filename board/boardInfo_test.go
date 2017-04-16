@@ -45,6 +45,7 @@ func Test_getPreRPI2FromRevision(t *testing.T) {
 		{name: "pi B", revision: "0002", wantInfo: RpiInfoT{model: ModelB, mem: Rpi256MB, processor: Broadcom2835,
 			manufacturer: MakerEgoman, pcbRev: PcbRev1, overVolted: false, i2c: I2C_0, revision: 0x0002}, wantErr: false},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotInfo, err := getPreRPI2FromRevision(tt.revision)

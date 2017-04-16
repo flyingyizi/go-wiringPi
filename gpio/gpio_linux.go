@@ -98,7 +98,7 @@ func bytesToUint32Slince(b []byte) (data []uint32) {
 	return
 }
 
-func Init() (err error) {
+func Open() (err error) {
 
 	_, piGpioBase, err := board.GetBoardInfo()
 	if err != nil {
