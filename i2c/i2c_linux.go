@@ -5,13 +5,13 @@ import (
 	"io"
 	"os"
 	"syscall"
-
-	"github.com/flyingyizi/go-wiringPi/board"
 )
 
 const (
 	i2cSLAVE  = 0x0703 // TODO(jbd): Allow users to use I2C_SLAVE_FORCE?
+    I2cSLAVEFORCE     = 0x0706 
 	i2cTENBIT = 0x0704
+
 )
 
 // Device represents an active connection to an I2C device.
@@ -42,23 +42,26 @@ func (d *Device) WriteReg(reg byte, buf []byte) (err error) {
 	return i2cTx(d.f, append([]byte{reg}, buf...), nil)
 }
 
-// as a 10-bit address with TenBit.
-// opens a 10-bit address example: d, err = i2c.Open( i2c.TenBit(0x78))
-func Open(addr int) (d *Device, err error) {
-	info, _, err := board.GetBoardInfo()
+// TODO(jbd): Support I2C_RETRIES and I2C_TIMEOUT at the driver and implementation level.
+// Open opens a connection to an I2C device.
+// All devices must be closed once they are no longer in use.
+func Open(device string) (d *Device, err error) {
+	f, err = os.OpenFile(device, os.O_RDWR, os.ModeDevice)
 	if err != nil {
-		return
+		return nil, err
 	}
-	device := info.I2CDeviceName()
-
-	unmasked, tenbit := resolveAddr(addr)
-	f, err := i2cOpen(device, unmasked, tenbit)
 
 	return &(Device{f: f}), err
 }
 
 func (d *Device) Close() (err error) {
 	err = i2cClose(d.f)
+	return
+}
+
+// SetAddr set the I2C slave address for all subsequent I2C device transfers
+func (d *Device) SetAddr(addr int) (err error) {
+	err = i2cSetAddress(d.f,addr )
 	return
 }
 
@@ -73,38 +76,6 @@ func TenBit(addr int) int {
 // It also returns the unmasked address.
 func resolveAddr(addr int) (unmasked int, tenbit bool) {
 	return addr & (tenbitMask - 1), addr&tenbitMask == tenbitMask
-}
-
-// TODO(jbd): Support I2C_RETRIES and I2C_TIMEOUT at the driver and implementation level.
-// Open opens a connection to an I2C device.
-// All devices must be closed once they are no longer in use.
-// For devices that use 10-bit I2C addresses, addr can be marked
-func i2cOpen(device string, addr int, tenbit bool) (f *os.File, err error) {
-
-	f, err = os.OpenFile(device, os.O_RDWR, os.ModeDevice)
-	if err != nil {
-		return nil, err
-	}
-
-	if tenbit {
-		if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cTENBIT, uintptr(1)); errno != 0 {
-			f.Close()
-			//return syscall.Errno(errno)
-			return nil, fmt.Errorf("cannot enable the 10-bit address mode on bus %v: %v", device, err)
-		}
-	}
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cSLAVE, uintptr(addr)); errno != 0 {
-		f.Close()
-		return nil, fmt.Errorf("error opening the address (%v) on the bus (%v): %v", addr, device, err)
-	}
-	return
-}
-
-func i2cClose(f *os.File) (err error) {
-	if f != nil {
-		err = f.Close()
-	}
-	return
 }
 
 // Tx first writes w (if not nil), then reads len(r)
@@ -124,6 +95,35 @@ func i2cTx(f *os.File, w []byte, r []byte) error {
 	}
 	return nil
 }
+
+// For devices that use 10-bit I2C addresses, addr can be marked
+// as a 10-bit address with TenBit.
+// opens a 10-bit address example: d, err = i2c.Open( i2c.TenBit(0x78))
+func i2cSetAddress(f *os.File,addr int, t I2cSetAddrType) error {
+    unmasked, tenbit := resolveAddr(addr)
+	if tenbit {
+		if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cTENBIT, uintptr(1)); errno != 0 {
+			f.Close()
+			//return syscall.Errno(errno)
+			return  fmt.Errorf("cannot enable the 10-bit address mode on bus %v: %v", device, errno)
+		}
+	}
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cSLAVE, uintptr(unmasked)); errno != 0 {
+		f.Close()
+		return  fmt.Errorf("error opening the address (%v) on the bus (%v): %v", addr, device, errno)
+	}
+
+    return nil
+}
+
+
+func i2cClose(f *os.File) (err error) {
+	if f != nil {
+		err = f.Close()
+	}
+	return
+}
+
 
 /*
  查看include/linux/i2c-dev.h文件，可以看到i2c-dev支持的IOCTL命令。
