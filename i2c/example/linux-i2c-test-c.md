@@ -32,7 +32,7 @@ Adapter numbers are assigned somewhat dynamically, so you can not
 assume much about them. They can even change from one boot to the next.
 
 Next thing, open the device file, as follows:
-
+```c
   int file;
   int adapter_nr = 2; /* probably dynamically determined */
   char filename[20];
@@ -43,21 +43,21 @@ Next thing, open the device file, as follows:
     /* ERROR HANDLING; you can check errno to see what went wrong */
     exit(1);
   }
-
+```
 When you have opened the device, you must specify with what device
 address you want to communicate:
-
+```c
   int addr = 0x40; /* The I2C address */
 
   if (ioctl(file, I2C_SLAVE, addr) < 0) {
     /* ERROR HANDLING; you can check errno to see what went wrong */
     exit(1);
   }
-
+```
 Well, you are all set up now. You can now use SMBus commands or plain
 I2C to communicate with your device. SMBus commands are preferred if
 the device supports them. Both are illustrated below.
-
+```c
   __u8 register = 0x10; /* Device register to access */
   __s32 res;
   char buf[10];
@@ -85,7 +85,7 @@ the device supports them. Both are illustrated below.
   } else {
     /* buf[0] contains the read byte */
   }
-
+```
 Note that only a subset of the I2C and SMBus protocols can be achieved by
 the means of read() and write() calls. In particular, so-called combined
 transactions (mixing read and write messages in the same transaction)
