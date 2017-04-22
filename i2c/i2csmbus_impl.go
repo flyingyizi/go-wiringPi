@@ -1,15 +1,23 @@
 package i2c
 
-//https://github.com/agarciamontoro/granasatServer/blob/master/src/LSM303.c
+//2. IOCTL SMBUS
+//This method of i/o is more powerful but the resulting code is more verbose.
+//This method can be used if the device does not support the I2C_RDWR method.
+//Using this method, you do need to perform an ioctl I2C_SLAVE operation (or, if
+//the device is busy, an I2C_SLAVE_FORCE operation).
+
 import (
 	"fmt"
 	"os"
+	"syscall"
 	"unsafe"
 )
 
 // ref https://www.kernel.org/pub/linux/kernel/people/marcelo/linux-2.4/include/linux/i2c.h
 /* smbus_access read or write markers */
 const (
+	I2C_SMBUS = 0x0720 /* SMBus-level access */
+
 	I2C_SMBUS_READ  = 1
 	I2C_SMBUS_WRITE = 0
 	/* SMBus transaction types (size parameter in the above functions)
@@ -43,9 +51,11 @@ type i2c_smbus_ioctl_data struct {
 	data       uintptr //union i2c_smbus_data *data;
 }
 
-func i2c_smbus_ioctl(f *os.File, data uintptr) (err error) {
-	/*TODO*/
-	return
+func i2c_smbus_ioctl(f *os.File, data uintptr) error {
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), I2C_SMBUS, data); errno != 0 {
+		return syscall.Errno(errno)
+	}
+	return nil
 }
 
 func i2c_smbus_access(f *os.File, read_write uint8, command uint8, size uint32, data interface{}) (err error) {
@@ -94,6 +104,7 @@ func i2c_smbus_access(f *os.File, read_write uint8, command uint8, size uint32, 
 	return
 }
 
+//i2c_smbus_write_quick()	Sends a single bit to the device (in place of the Rd/Wr bit shown in Listing 8.1).
 func i2c_smbus_write_quick(f *os.File, value uint8) (err error) {
 	/*static inline __s32 i2c_smbus_write_quick(int file, __u8 value)
 	  {
@@ -104,6 +115,8 @@ func i2c_smbus_write_quick(f *os.File, value uint8) (err error) {
 	return
 }
 
+//i2c_smbus_read_byte()	Reads a single byte from the device without specifying a 
+//location offset. Uses the same offset as the previously issued command.
 func i2c_smbus_read_byte(f *os.File) (data uint8, err error) {
 	/*static inline __s32 i2c_smbus_read_byte(int file)
 	  {
@@ -117,6 +130,8 @@ func i2c_smbus_read_byte(f *os.File) (data uint8, err error) {
 	return
 }
 
+//i2c_smbus_write_byte()	Sends a single byte to the device at the same memory 
+//offset as the previously issued command.
 func i2c_smbus_write_byte(f *os.File, value uint8) (err error) {
 	/*static inline __s32 i2c_smbus_write_byte(int file, __u8 value)
 	  {
@@ -127,6 +142,7 @@ func i2c_smbus_write_byte(f *os.File, value uint8) (err error) {
 	return
 }
 
+//i2c_smbus_read_byte_data()	Reads a single byte from the device at a specified offset.
 func i2c_smbus_read_byte_data(f *os.File, command uint8) (data uint8, err error) {
 	/*static inline __s32 i2c_smbus_read_byte_data(int file, __u8 command)
 	  {
@@ -141,6 +157,7 @@ func i2c_smbus_read_byte_data(f *os.File, command uint8) (data uint8, err error)
 	return
 }
 
+//i2c_smbus_write_byte_data()	Sends a single byte to the device at a specified offset.
 func i2c_smbus_write_byte_data(f *os.File, command uint8, value uint8) (err error) {
 	/*static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command,
 	                                                __u8 value)
@@ -154,6 +171,7 @@ func i2c_smbus_write_byte_data(f *os.File, command uint8, value uint8) (err erro
 	return
 }
 
+//i2c_smbus_read_word_data()	Reads 2 bytes from the specified offset.
 func i2c_smbus_read_word_data(f *os.File, command uint8) (data uint16, err error) {
 	/*static inline __s32 i2c_smbus_read_word_data(int file, __u8 command)
 	  {
@@ -168,7 +186,8 @@ func i2c_smbus_read_word_data(f *os.File, command uint8) (data uint16, err error
 	return
 }
 
-func i2c_smbus_write_word_data(f *os.File, command uint8, value uint8) (err error) {
+//i2c_smbus_write_word_data()	Sends 2 bytes to the specified offset.
+func i2c_smbus_write_word_data(f *os.File, command uint8, value uint16) (err error) {
 	/*static inline __s32 i2c_smbus_write_word_data(int file, __u8 command,
 	                                                __u16 value)
 	  {
@@ -198,6 +217,7 @@ func i2c_smbus_process_call(f *os.File, command uint8, value uint16) (data uint1
 }
 
 /* Returns the read bytes */
+//i2c_smbus_read_block_data()	Reads a block of data from the specified offset.
 func i2c_smbus_read_block_data(f *os.File, command uint8) ([]byte, error) {
 	/*static inline __s32 i2c_smbus_read_block_data(int file, __u8 command,
 	                                                __u8 *values)
@@ -222,6 +242,7 @@ func i2c_smbus_read_block_data(f *os.File, command uint8) ([]byte, error) {
 	return block, fmt.Errorf("i2c_smbus_read_block_data: can not read ")
 }
 
+//i2c_smbus_write_block_data()	Sends a block of data (<= 32 bytes) to the specified offset.
 func i2c_smbus_write_block_data(f *os.File, command uint8, length uint8, value []byte) (err error) {
 	/*static inline __s32 i2c_smbus_write_block_data(int file, __u8 command,
 	                                                 __u8 length, __u8 *values)
@@ -269,3 +290,31 @@ func i2c_smbus_write_i2c_block_data(f *os.File, command uint8, length uint8, val
 	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_I2C_BLOCK_DATA /*size*/, value /*data*/)
 	return
 }
+
+/*
+Suppose we are on a 32-bit machine.
+If it is little endian, the x in the memory will be something like:
+
+       higher memory
+          ----->
+    +----+----+----+----+
+    |0x01|0x00|0x00|0x00|
+    +----+----+----+----+
+    A
+    |
+   &x
+
+so (char*)(*x) == 1, and *y+48 == '1'.
+
+If it is big endian, it will be:
+
+    +----+----+----+----+
+    |0x00|0x00|0x00|0x01|
+    +----+----+----+----+
+    A
+    |
+   &x
+
+so this one will be '0'.
+
+*/

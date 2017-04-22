@@ -1,82 +1,18 @@
 package i2c
 
+//3. SYSFS I/O
+//This method uses the basic file i/o system calls read() and write(). Uninterrupted
+//sequential operations are not possible using this method. This method can be used
+//if the device does not support the I2C_RDWR method.
+//Using this method, you do need to perform an ioctl I2C_SLAVE operation (or, if
+//the device is busy, an I2C_SLAVE_FORCE operation).
+//I can't think of any situation when this method would be preferable to
+//others, unless you need the chip to be treated like a file.
+
 import (
-	"fmt"
 	"io"
 	"os"
-	"syscall"
 )
-
-const (
-	i2cSLAVE  = 0x0703 // TODO(jbd): Allow users to use I2C_SLAVE_FORCE?
-    I2cSLAVEFORCE     = 0x0706 
-	i2cTENBIT = 0x0704
-
-)
-
-// Device represents an active connection to an I2C device.
-type Device struct {
-	f *os.File
-}
-
-// Read reads len(buf) bytes from the device.
-func (d *Device) Read(buf []byte) error {
-	return i2cTx(d.f, nil, buf)
-}
-
-// ReadReg is similar to Read but it reads from a register.
-func (d *Device) ReadReg(reg byte, buf []byte) error {
-	return i2cTx(d.f, []byte{reg}, buf)
-}
-
-// Write writes the buffer to the device. If it is required to write to a
-// specific register, the register should be passed as the first byte in the
-// given buffer.
-func (d *Device) Write(buf []byte) (err error) {
-	return i2cTx(d.f, buf, nil)
-}
-
-// WriteReg is similar to Write but writes to a register.
-func (d *Device) WriteReg(reg byte, buf []byte) (err error) {
-	// TODO(jbd): Do not allocate, not optimal.
-	return i2cTx(d.f, append([]byte{reg}, buf...), nil)
-}
-
-// TODO(jbd): Support I2C_RETRIES and I2C_TIMEOUT at the driver and implementation level.
-// Open opens a connection to an I2C device.
-// All devices must be closed once they are no longer in use.
-func Open(device string) (d *Device, err error) {
-	f, err = os.OpenFile(device, os.O_RDWR, os.ModeDevice)
-	if err != nil {
-		return nil, err
-	}
-
-	return &(Device{f: f}), err
-}
-
-func (d *Device) Close() (err error) {
-	err = i2cClose(d.f)
-	return
-}
-
-// SetAddr set the I2C slave address for all subsequent I2C device transfers
-func (d *Device) SetAddr(addr int) (err error) {
-	err = i2cSetAddress(d.f,addr )
-	return
-}
-
-const tenbitMask = 1 << 12
-
-// TenBit marks an I2C address as a 10-bit address.
-func TenBit(addr int) int {
-	return addr | tenbitMask
-}
-
-// resolveAddr returns whether the addr is 10-bit masked or not.
-// It also returns the unmasked address.
-func resolveAddr(addr int) (unmasked int, tenbit bool) {
-	return addr & (tenbitMask - 1), addr&tenbitMask == tenbitMask
-}
 
 // Tx first writes w (if not nil), then reads len(r)
 // bytes from device into r (if not nil) in a single
@@ -96,45 +32,16 @@ func i2cTx(f *os.File, w []byte, r []byte) error {
 	return nil
 }
 
-// For devices that use 10-bit I2C addresses, addr can be marked
-// as a 10-bit address with TenBit.
-// opens a 10-bit address example: d, err = i2c.Open( i2c.TenBit(0x78))
-func i2cSetAddress(f *os.File,addr int, t I2cSetAddrType) error {
-    unmasked, tenbit := resolveAddr(addr)
-	if tenbit {
-		if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cTENBIT, uintptr(1)); errno != 0 {
-			f.Close()
-			//return syscall.Errno(errno)
-			return  fmt.Errorf("cannot enable the 10-bit address mode on bus %v: %v", device, errno)
-		}
-	}
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), i2cSLAVE, uintptr(unmasked)); errno != 0 {
-		f.Close()
-		return  fmt.Errorf("error opening the address (%v) on the bus (%v): %v", addr, device, errno)
-	}
-
-    return nil
-}
-
-
-func i2cClose(f *os.File) (err error) {
-	if f != nil {
-		err = f.Close()
-	}
-	return
-}
-
-
 /*
  查看include/linux/i2c-dev.h文件，可以看到i2c-dev支持的IOCTL命令。
-#define I2C_RETRIES                   0x0701                                   //设置收不到ACK时的重试次数
+#define I2C_RETRIES                   0x0701     //设置收不到ACK时的重试次数
 1．  设置重试次数
 ioctl(fd, I2C_RETRIES,m); //这句话设置适配器收不到ACK时重试的次数为m。默认的重试次数为1。
 
-#define I2C_TIMEOUT                0x0702                                   // 设置超时时限的jiffies
+#define I2C_TIMEOUT                0x0702       // 设置超时时限的jiffies
  ioctl(fd, I2C_TIMEOUT,m); //设置SMBus的超时时间为m，单位为jiffies。
 
-#define I2C_SLAVE                      0x0703                                   设置从机地址
+#define I2C_SLAVE                      0x0703           设置从机地址
 #define I2C_SLAVE_FORCE        0x0706                                  //强制设置从机地址
  ioctl(fd, I2C_SLAVE,addr);
 ioctl(fd, #defineI2C_SLAVE_FORCE, addr);  //在调用read()和write()函数之前必须设置从机地址。这两行都可以设置从机的地址，区别是第二行无论内核中
@@ -251,9 +158,9 @@ exit:
 }
 1.3.2  I2C_RDWR
 
-还可以使用I2C_RDWR实现同样的功能，如<!--[if supportFields]> REF _Ref283651333 /h <![endif]-->程序清单 3.6<!--[if gte mso 9]><![endif]--><!--[if supportFields]><![endif]-->所示。此时ioctl返回的值为执行成功的消息数。
+还可以使用I2C_RDWR实现同样的功能，如程序清单所示。此时ioctl返回的值为执行成功的消息数。
 
-程序清单 <!--[if supportFields]> STYLEREF 1 /s <![endif]-->3<!--[if supportFields]><![endif]-->.<!--[if supportFields]> SEQ 程序清单 /* ARABIC /s 1 <![endif]-->6<!--[if supportFields]><![endif]-->   使用I2C_RDWR与I2C设备通信
+程序清单  使用I2C_RDWR与I2C设备通信
 
 #include <stdio.h>
 #include <sys/ioctl.h>
