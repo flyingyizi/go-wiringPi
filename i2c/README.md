@@ -69,6 +69,21 @@ Using this method, you do not need to perform an ioctl I2C_SLAVE operation -- it
 
 ### IOCTL SMBUS
 
+Because SMBus is a subset of I2C, using only SMBus commands to talk to your device yields a driver that works with both SMBus and I2C adapters. Table 8.1 lists the SMBus-compatible data transfer routines provided by the I2C core.
+
+| Function	                   | Purpose                                                                                                                          |    
+|------------------------------|----------------------------------------------------------------------------------------------------------------------------------|             
+| i2c_smbus_read_byte()	       | Reads a single byte from the device without specifying a location offset. Uses the same offset as the previously issued command. |
+| i2c_smbus_write_byte()	     | Sends a single byte to the device at the same memory offset as the previously issued command.                                    |
+| i2c_smbus_write_quick()	     | Sends a single bit to the device (in place of the Rd/Wr bit shown in Listing 8.1).                                               |
+| i2c_smbus_read_byte_data()	 | Reads a single byte from the device at a specified offset.                                                                       |
+| i2c_smbus_write_byte_data()	 | Sends a single byte to the device at a specified offset.                                                                         |
+| i2c_smbus_read_word_data()	 | Reads 2 bytes from the specified offset.                                                                                         |
+| i2c_smbus_write_word_data()	 | Sends 2 bytes to the specified offset.                                                                                           |
+| i2c_smbus_read_block_data()	 | Reads a block of data from the specified offset.                                                                                 |
+| i2c_smbus_write_block_data() | Sends a block of data (<= 32 bytes) to the specified offset.                                                                     |
+|                              |                                                                                                                                  |
+
 This method of i/o is more powerful but the resulting code is more verbose. This method can be used if the device does not support the I2C_RDWR method.
 
 Using this method, you do need to perform an ioctl I2C_SLAVE operation (or, if the device is busy, an I2C_SLAVE_FORCE operation).

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	c := &serial.Config{Name: "/dev/tty.usbserial", Baud: 115200, ReadTimeout: time.Millisecond * 500}
+	c := &serial.Config{Name: "/dev/ttyS0", Baud: 9600, ReadTimeout: time.Millisecond * 500}
 	s, err := serial.OpenPort(c)
 	if err != nil {
 		log.Fatal(err)

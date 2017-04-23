@@ -63,3 +63,21 @@ Revision field in /proc/cpuinfo. The bit fields are as follows
 
 Also, due to some early issues the warranty bit has been move from bit
 24 to bit 25 of the revision number (i.e. 0x2000000).
+
+
+## 
+Peripheral Offsets for the Raspberry Pi
+|Peripheral  | Offset     | Address    | Description       |  C Offset Macro     |     
+|------------|------------|------------|-------------------|---------------------|
+|Base        | 0x00000000 | 0x20000000 | Starting address  |  BCM2708_PERI_BASE  |
+|PADS_GPIO   | 0x00100000 | 0x20100000 | PADS base         |  PADS_GPIO_BASE     |
+|GPIO 00..27 | 0x0010002C | 0x2010002C | GPIO 00..27 pads  |  PADS_GPIO_00_27    |
+|GPIO 28..45 | 0x00100030 | 0x20100030 | GPIO 28..45 pads  |  PADS_GPIO_28_45    |
+|GPIO 46..53 | 0x00100034 | 0x20100034 | GPIO 46..53 pads  |  PADS_GPIO_46_53    |
+|Clock       | 0x00101000 | 0x20101000 | Clock registers   |  ClkBase            |
+|GPIO        | 0x00200000 | 0x20200000 | GPIO registers    |  GpioBase           |
+|GPPUD       | 0x00200025 | 0x20200025 | Pull-up enable    |                     |
+|GPPUDCLK0   | 0x00200026 | 0x20200026 | Pull-up clock 0   |                     |
+|GPPUDCLK1   | 0x00200027 | 0x20200027 | Pull-up clock 1   |                     |
+|PWM         | 0x0020C000 | 0x2020C000 | PWM registers     |  PwmBase            |           
+|            |            |            |                   |                     |

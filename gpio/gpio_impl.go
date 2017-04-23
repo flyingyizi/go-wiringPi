@@ -1,5 +1,3 @@
-//+build linux
-
 package gpio
 
 import (
@@ -10,8 +8,16 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-		"github.com/flyingyizi/go-wiringPi/board"
 
+	"github.com/flyingyizi/go-wiringPi/board"
+)
+
+// Peripheral Offsets for the Raspberry Pi
+const (
+	ClkBase      = 0x00101000 // Clock registers
+	GpioBase     = 0x00200000 // GPIO registers
+	PwmBase      = 0x0020C000 // PWM registers
+	PadsGpioBase = 0x00100000 //	PADS base
 )
 
 const SizeOfuint32 = 4 // bytes
@@ -106,11 +112,11 @@ func Open() (err error) {
 	}
 
 	// Set the offsets into the memory interface.
-	GPIO_PADS := piGpioBase + 0x00100000
-	GPIO_CLOCK_BASE := piGpioBase + 0x00101000
-	GPIO_BASE := piGpioBase + 0x00200000
+	GPIO_PADS := piGpioBase + PadsGpioBase
+	GPIO_CLOCK_BASE := piGpioBase + ClkBase
+	GPIO_BASE := piGpioBase + GpioBase
 	//GPIO_TIMER := piGpioBase + 0x0000B000
-	GPIO_PWM := piGpioBase + 0x0020C000
+	GPIO_PWM := piGpioBase + PwmBase
 
 	//	Try /dev/mem. If that fails, then
 	//	try /dev/gpiomem. If that fails then game over.
