@@ -15,15 +15,15 @@ import (
 //operation -- it is done behind the scenes using the information embedded in the messages.
 
 const (
-	I2C_FUNCS = 0x0705 /* Get the adapter functionality */
-	I2C_RDWR  = 0x0707 /* Combined R/W transfer (one stop only)*/
+	i2C_FUNCS = 0x0705 /* Get the adapter functionality */
+	i2C_RDWR  = 0x0707 /* Combined R/W transfer (one stop only)*/
 )
 
 const (
 
 	/* To determine what functionality is present */
 
-	I2C_FUNC_I2C = 0x00000001
+	i2C_FUNC_I2C = 0x00000001
 
 //#define I2C_FUNC_10BIT_ADDR		0x00000002
 //#define I2C_FUNC_PROTOCOL_MANGLING	0x00000004 /* I2C_M_{REV_DIR_ADDR,NOSTART,..} */
@@ -47,7 +47,7 @@ const (
 //https://github.com/ve3wwg/raspberry_pi/blob/master/mcp23017/i2c_funcs.c
 
 func i2c_funcs_ioctl(f *os.File, data uintptr) error {
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), I2C_FUNCS, data); errno != 0 {
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), i2C_FUNCS, data); errno != 0 {
 		return syscall.Errno(errno)
 	}
 	return nil
@@ -57,12 +57,12 @@ func supportI2cRDWR(f *os.File) (b bool, err error) {
 	var data uint64
 	err = i2c_funcs_ioctl(f, uintptr(unsafe.Pointer(&data)))
 	if err != nil {
-		x := data & I2C_FUNC_I2C
+		x := data & i2C_FUNC_I2C
 		if x != 0 {
 			b = true
 		}
 	}
-
+	return
 }
 
 /*

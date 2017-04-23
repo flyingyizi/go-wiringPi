@@ -12,7 +12,7 @@ const (
 	/* this is for i2c-dev.c	*/
 	i2cSLAVE = 0x0703 /* Change slave address			*/
 	/* Attn.: Slave address is 7 or 10 bits */
-	I2cSLAVEFORCE = 0x0706 /* Change slave address			*/
+	i2cSLAVEForce = 0x0706 /* Change slave address			*/
 	/* Attn.: Slave address is 7 or 10 bits */
 	/* This changes the address, even if it */
 	/* is already taken!			*/
@@ -31,9 +31,9 @@ type Device struct {
 	masterIsBigEndian bool // if BigEndian it is true, else false
 }
 
-// TODO(jbd): Support I2C_RETRIES and I2C_TIMEOUT at the driver and implementation level.
 // Open opens a connection to an I2C slave device.
 // All devices must be closed once they are no longer in use.
+// TODO(jbd): Support I2C_RETRIES and I2C_TIMEOUT at the driver and implementation level.
 func Open(device string) (d *Device, err error) {
 	f, err := os.OpenFile(device, os.O_RDWR, os.ModeDevice)
 	if err != nil {
@@ -205,13 +205,11 @@ func (d *Device) SysfsWriteReg(reg byte, buf []byte) (err error) {
 //true = big endian, false = little endian
 func getEndian() (ret bool) {
 	//以下代码判断机器大小端
-	const INT_SIZE int = int(unsafe.Sizeof(0))
+	const intsize int = int(unsafe.Sizeof(0))
 	var i int = 0x1
-	bs := (*[INT_SIZE]byte)(unsafe.Pointer(&i))
+	bs := (*[intsize]byte)(unsafe.Pointer(&i))
 	if bs[0] == 0 {
 		return true
-	} else {
-		return false
 	}
-
+	return false
 }

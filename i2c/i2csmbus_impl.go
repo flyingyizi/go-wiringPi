@@ -16,19 +16,19 @@ import (
 // ref https://www.kernel.org/pub/linux/kernel/people/marcelo/linux-2.4/include/linux/i2c.h
 /* smbus_access read or write markers */
 const (
-	I2C_SMBUS = 0x0720 /* SMBus-level access */
+	i2C_SMBUS = 0x0720 /* SMBus-level access */
 
-	I2C_SMBUS_READ  = 1
-	I2C_SMBUS_WRITE = 0
+	i2C_SMBUS_READ  = 1
+	i2C_SMBUS_WRITE = 0
 	/* SMBus transaction types (size parameter in the above functions)
 	   Note: these no longer correspond to the (arbitrary) PIIX4 internal codes! */
-	I2C_SMBUS_QUICK          = 0
-	I2C_SMBUS_BYTE           = 1
-	I2C_SMBUS_BYTE_DATA      = 2
-	I2C_SMBUS_WORD_DATA      = 3
-	I2C_SMBUS_PROC_CALL      = 4
-	I2C_SMBUS_BLOCK_DATA     = 5
-	I2C_SMBUS_I2C_BLOCK_DATA = 6
+	i2C_SMBUS_QUICK          = 0
+	i2C_SMBUS_BYTE           = 1
+	i2C_SMBUS_BYTE_DATA      = 2
+	i2C_SMBUS_WORD_DATA      = 3
+	i2C_SMBUS_PROC_CALL      = 4
+	i2C_SMBUS_BLOCK_DATA     = 5
+	i2C_SMBUS_I2C_BLOCK_DATA = 6
 )
 
 // ref https://www.kernel.org/pub/linux/kernel/people/marcelo/linux-2.4/include/linux/i2c-dev.h
@@ -36,7 +36,7 @@ const (
  * Data for SMBus Messages
  */
 const (
-	I2C_SMBUS_BLOCK_MAX     = 32 /* As specified in SMBus standard */
+	i2C_SMBUS_BLOCK_MAX     = 32 /* As specified in SMBus standard */
 	I2C_SMBUS_I2C_BLOCK_MAX = 32 /* Not specified but we use same structure */
 )
 
@@ -52,7 +52,7 @@ type i2c_smbus_ioctl_data struct {
 }
 
 func i2c_smbus_ioctl(f *os.File, data uintptr) error {
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), I2C_SMBUS, data); errno != 0 {
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), i2C_SMBUS, data); errno != 0 {
 		return syscall.Errno(errno)
 	}
 	return nil
@@ -111,11 +111,11 @@ func i2c_smbus_write_quick(f *os.File, value uint8) (err error) {
 	  	return i2c_smbus_access(file,value,0,I2C_SMBUS_QUICK,NULL);
 	  }
 	*/
-	err = i2c_smbus_access(f, value /*read_write*/, 0 /*command*/, I2C_SMBUS_QUICK /*size*/, nil /*data*/)
+	err = i2c_smbus_access(f, value /*read_write*/, 0 /*command*/, i2C_SMBUS_QUICK /*size*/, nil /*data*/)
 	return
 }
 
-//i2c_smbus_read_byte()	Reads a single byte from the device without specifying a 
+//i2c_smbus_read_byte()	Reads a single byte from the device without specifying a
 //location offset. Uses the same offset as the previously issued command.
 func i2c_smbus_read_byte(f *os.File) (data uint8, err error) {
 	/*static inline __s32 i2c_smbus_read_byte(int file)
@@ -126,11 +126,11 @@ func i2c_smbus_read_byte(f *os.File) (data uint8, err error) {
 	  	else
 	  		return 0x0FF & data.byte;
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_READ /*read_write*/, 0 /*command*/, I2C_SMBUS_BYTE /*size*/, &data /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_READ /*read_write*/, 0 /*command*/, i2C_SMBUS_BYTE /*size*/, &data /*data*/)
 	return
 }
 
-//i2c_smbus_write_byte()	Sends a single byte to the device at the same memory 
+//i2c_smbus_write_byte()	Sends a single byte to the device at the same memory
 //offset as the previously issued command.
 func i2c_smbus_write_byte(f *os.File, value uint8) (err error) {
 	/*static inline __s32 i2c_smbus_write_byte(int file, __u8 value)
@@ -138,7 +138,7 @@ func i2c_smbus_write_byte(f *os.File, value uint8) (err error) {
 	  	return i2c_smbus_access(file,I2C_SMBUS_WRITE,value,
 	  	                        I2C_SMBUS_BYTE,NULL);
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, value /*command*/, I2C_SMBUS_BYTE /*size*/, nil /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, value /*command*/, i2C_SMBUS_BYTE /*size*/, nil /*data*/)
 	return
 }
 
@@ -153,7 +153,7 @@ func i2c_smbus_read_byte_data(f *os.File, command uint8) (data uint8, err error)
 	  	else
 	  		return 0x0FF & data.byte;
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_READ /*read_write*/, command /*command*/, I2C_SMBUS_BYTE_DATA /*size*/, &data /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_READ /*read_write*/, command /*command*/, i2C_SMBUS_BYTE_DATA /*size*/, &data /*data*/)
 	return
 }
 
@@ -167,7 +167,7 @@ func i2c_smbus_write_byte_data(f *os.File, command uint8, value uint8) (err erro
 	  	return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
 	  	                        I2C_SMBUS_BYTE_DATA, &data);
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_BYTE_DATA /*size*/, &value /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, command /*command*/, i2C_SMBUS_BYTE_DATA /*size*/, &value /*data*/)
 	return
 }
 
@@ -182,7 +182,7 @@ func i2c_smbus_read_word_data(f *os.File, command uint8) (data uint16, err error
 	  	else
 	  		return 0x0FFFF & data.word;
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_READ /*read_write*/, command /*command*/, I2C_SMBUS_WORD_DATA /*size*/, &data /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_READ /*read_write*/, command /*command*/, i2C_SMBUS_WORD_DATA /*size*/, &data /*data*/)
 	return
 }
 
@@ -196,7 +196,7 @@ func i2c_smbus_write_word_data(f *os.File, command uint8, value uint16) (err err
 	  	return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
 	  	                        I2C_SMBUS_WORD_DATA, &data);
 	  }*/
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_WORD_DATA /*size*/, &value /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, command /*command*/, i2C_SMBUS_WORD_DATA /*size*/, &value /*data*/)
 	return
 }
 
@@ -212,7 +212,7 @@ func i2c_smbus_process_call(f *os.File, command uint8, value uint16) (data uint1
 	  		return 0x0FFFF & data.word;
 	  }*/
 	data = value
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_PROC_CALL /*size*/, &data /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, command /*command*/, i2C_SMBUS_PROC_CALL /*size*/, &data /*data*/)
 	return
 }
 
@@ -233,8 +233,8 @@ func i2c_smbus_read_block_data(f *os.File, command uint8) ([]byte, error) {
 	  			return data.block[0];
 	  	}
 	  }*/
-	block := make([]byte, I2C_SMBUS_BLOCK_MAX+2, I2C_SMBUS_BLOCK_MAX+2)
-	err := i2c_smbus_access(f, I2C_SMBUS_READ /*read_write*/, command /*command*/, I2C_SMBUS_BLOCK_DATA /*size*/, block /*data*/)
+	block := make([]byte, i2C_SMBUS_BLOCK_MAX+2, i2C_SMBUS_BLOCK_MAX+2)
+	err := i2c_smbus_access(f, i2C_SMBUS_READ /*read_write*/, command /*command*/, i2C_SMBUS_BLOCK_DATA /*size*/, block /*data*/)
 	len := len(block)
 	if (len > 0) && err == nil {
 		return block[1 : 1+len], nil
@@ -263,7 +263,7 @@ func i2c_smbus_write_block_data(f *os.File, command uint8, length uint8, value [
 	value = value[:length]
 	value = append([]byte{length}, value[0:]...)
 
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_BLOCK_DATA /*size*/, value /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, command /*command*/, i2C_SMBUS_BLOCK_DATA /*size*/, value /*data*/)
 	return
 }
 
@@ -287,7 +287,7 @@ func i2c_smbus_write_i2c_block_data(f *os.File, command uint8, length uint8, val
 	value = value[:length]
 	value = append([]byte{length}, value[0:]...)
 
-	err = i2c_smbus_access(f, I2C_SMBUS_WRITE /*read_write*/, command /*command*/, I2C_SMBUS_I2C_BLOCK_DATA /*size*/, value /*data*/)
+	err = i2c_smbus_access(f, i2C_SMBUS_WRITE /*read_write*/, command /*command*/, i2C_SMBUS_I2C_BLOCK_DATA /*size*/, value /*data*/)
 	return
 }
 
