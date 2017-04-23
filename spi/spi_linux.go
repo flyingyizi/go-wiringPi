@@ -10,7 +10,6 @@ import (
 )
 
 /*
-#cgo linux, CFLAGS: -O2 -D_GNU_SOURCE -Wformat=2 -Wall -Wextra -Winline  -pipe -fPIC
 #include <sys/ioctl.h>
 #include <asm/ioctl.h>
 #include <linux/spi/spidev.h>
@@ -155,7 +154,13 @@ func spiIOCMessageN(n uint32) uint32 {
  *********************************************************************************
  */
 //https://github.com/kidoman/embd/blob/master/host/generic/spibus.go
-func spiTx(f *os.File, dataBuffer []uint8, speed uint32, bpw uint8) error {
+func spiTx(f *os.File, dataBuffer []uint8, speed uint32, bpw uint8, delay uint16) error {
+	/*
+		defaultDelayms      = 0
+		defaultSPIBPW       = 8
+		defaultSPISpeed     = 1000000
+
+	*/
 
 	if f == nil {
 		return errors.New("bad")
@@ -164,6 +169,7 @@ func spiTx(f *os.File, dataBuffer []uint8, speed uint32, bpw uint8) error {
 	len := len(dataBuffer)
 
 	// struct  spi_ioc_transfer
+
 	var dataCarrier C.struct_spi_ioc_transfer //= C.struct_spi_ioc_transfer{id, 21}
 
 	dataCarrier.len = C.__u32(len)
@@ -171,6 +177,7 @@ func spiTx(f *os.File, dataBuffer []uint8, speed uint32, bpw uint8) error {
 	dataCarrier.rx_buf = C.__u64(uintptr(unsafe.Pointer(&dataBuffer[0])))
 	dataCarrier.speed_hz = C.__u32(speed)
 	dataCarrier.bits_per_word = C.__u8(bpw)
+	dataCarrier.delay_usecs = C.__u16(delay)
 	//spi.tx_buf        = (unsigned long)data ;
 	//spi.rx_buf        = (unsigned long)data ;
 	//spi.len           = len ;
@@ -245,43 +252,40 @@ type Device struct {
 	mode    byte
 	speed   uint32
 	bpw     uint8
-	delayms int
+	delayms uint16
 
 	mu sync.Mutex
 }
 
+func (d *Device) Open(channel byte, model uint8, speed uint32, bpw uint8, delay uint16) error {
+	f, err := spiOpen(channel, model, speed, bpw)
+	if err != nil {
+		return err
+	}
+	d.f = f
+	d.channel = channel
+	d.mode = model
+	d.speed = speed
+	d.delayms = delay
+	return nil
 
-func (d *Device) Open(channel byte, model uint8, speed uint32, bpw uint8)  error {
-f, err :=spiOpen(channel byte, model uint8, speed uint32, bpw uint8) (f *os.File, err error) 
-if err !=nil {
-	return
 }
-d.f =f
-d.channel=channel
-d.mode=model
-d.speed=speed
-return
 
-}
-
-
-// TransferAndReceiveData, fistly sending databuffer, then read into data buffer
+// Tx : TransferAndReceiveData, fistly sending databuffer, then read into data buffer
 func (d *Device) Tx(dataBuffer []uint8) (err error) {
 
-    err =spiTx(d.f, dataBuffer, d.speed, d.bpw) 
-return
+	err = spiTx(d.f, dataBuffer, d.speed, d.bpw, d.delayms)
+	return
 }
-
 
 func (d *Device) Write(data []byte) (n int, err error) {
 	return d.f.Write(data)
 }
 
-
 func (d *Device) ReceiveData(len int) ([]uint8, error) {
 	data := make([]uint8, len)
 	err := d.Tx(data)
-	if  err != nil {
+	if err != nil {
 		return nil, err
 	}
 	return data, err
@@ -293,7 +297,7 @@ func (d *Device) TransferAndReceiveByte(data byte) (byte, error) {
 	if err := d.Tx(dt[:]); err != nil {
 		return 0, err
 	}
-	return d[0], nil
+	return dt[0], nil
 }
 
 func (d *Device) ReceiveByte() (byte, error) {
@@ -302,12 +306,11 @@ func (d *Device) ReceiveByte() (byte, error) {
 	if err := d.Tx(dt[:]); err != nil {
 		return 0, err
 	}
-	return byte(d[0]), nil
+	return byte(dt[0]), nil
 }
 
-
 func (d *Device) Close() error {
-	b.mu.Lock()
+	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	return d.f.Close()
