@@ -1,5 +1,9 @@
 
 
+## win7用久了,莫名奇妙,很多com端口号 都是使用中...把常用的端口都占完了....
+打开CMD命令行，输入regedit打开注册表，找到HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\COM Name Arbiter，然后把ComDB删除,扫描检测硬件改动即可，不行的话重启PC即可
+
+ref: https://github.com/johnlauer/serial-port-json-server
 
 ## How do I make serial work on the Raspberry Pi3
 
