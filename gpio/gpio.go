@@ -52,7 +52,8 @@ func (p Pin) Low() error {
 
 // Toggle a pin state (high -> low -> high)
 func (pin Pin) TogglePin() {
-	switch gpioReadPin(pin.bcmNumber) {
+	value, _ := gpioReadPin(pin.bcmNumber)
+	switch value {
 	case 0:
 		pin.High()
 	default:
