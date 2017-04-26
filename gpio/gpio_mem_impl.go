@@ -1,3 +1,5 @@
+//+build MEMMAP
+
 package gpio
 
 import (
@@ -37,49 +39,8 @@ var (
 	pads []byte
 )
 
-type Pull uint8
-
-// Pull Up / Down / Off
-const (
-	PullOff Pull = iota
-	PullDown
-	PullUp
-)
-
-type Pin uint8
-
-// Set pin as Input
-func (pin Pin) Input() {
-	gpiopinMode(pin, 0)
-}
-
-// Set pin as Output
-func (pin Pin) Output() {
-	gpiopinMode(pin, 1)
-}
-
-// Set pin High
-func (pin Pin) High() {
-	gpioWritePin(pin, 1)
-}
-
-// Set pin Low
-func (pin Pin) Low() {
-	gpioWritePin(pin, 0)
-}
-
-// Toggle a pin state (high -> low -> high)
-func (pin Pin) TogglePin() {
-	switch gpioReadPin(pin) {
-	case 0:
-		pin.High()
-	default:
-		pin.Low()
-	}
-}
-
 // Close unmaps GPIO memory
-func Close() (err error) {
+func gpioClose() (err error) {
 	memlock.Lock()
 	defer memlock.Unlock()
 
@@ -104,7 +65,7 @@ func bytesToUint32Slince(b []byte) (data []uint32) {
 	return
 }
 
-func Open() (err error) {
+func gpioOpen() (err error) {
 
 	_, piGpioBase, err := board.GetBoardInfo()
 	if err != nil {
@@ -165,35 +126,34 @@ func Open() (err error) {
 }
 
 // Read the state(0:low, 1:high) of a pin
-func gpioReadPin(pin Pin) int {
+func gpioReadPin(bcmNumber uint8) (value uint, err error) {
 	// Input level register offset (13 / 14 depending on bank)
 	//In the datasheet on page 96, we seet that the GPLEVn register is
 	//located 13 or 14 32-bit registers further than the gpio base register. GPLEV0 STORE 0~31,GPLEV1 STORE 32~53,
-
-	levelReg := uint8(pin)/32 + 13
+	levelReg := (bcmNumber)/32 + 13
 
 	if (gpioArry[levelReg] & (1 << uint8(pin))) != 0 {
-		return 1
+		return 1, nil
 	}
 
-	return 0
+	return 0, nil
 }
 
 // gpiopinMode sets the direction of a given pin (Input(0) or Output(1))
-func gpiopinMode(pin Pin, direction int) {
+func gpiopinMode(bcmNumber uint8, direction Direction) {
 
 	//In the datasheet at page 91 we find that the GPFSEL registers are organised per 10 pins.
 	//So one 32-bit register contains the setup bits for 10 pins. *gpio.addr + ((g))/10 is
 	// the register address that contains the GPFSEL bits of the pin "g"
 	// Pin fsel register, 0 or 1 depending on bank
-	fsel := uint8(pin) / 10
+	fsel := (bcmNumber) / 10
 	//There are three GPFSEL bits per pin (000: input, 001: output). The location
 	//of these three bits inside the GPFSEL register is given by ((g)%10)*3
-	shift := (uint8(pin) % 10) * 3
+	shift := ((bcmNumber) % 10) * 3
 	memlock.Lock()
 	defer memlock.Unlock()
 
-	if direction == 0 {
+	if direction == inDirection {
 		gpioArry[fsel] = gpioArry[fsel] &^ (7 << shift) //7:0b111 - pinmode is 3 bits
 	} else {
 		//This is also the reason that the comment says to "always use INP_GPIO(x) before using
@@ -203,6 +163,7 @@ func gpiopinMode(pin Pin, direction int) {
 		gpioArry[fsel] = gpioArry[fsel] &^ (7 << shift)
 		gpioArry[fsel] = (gpioArry[fsel] &^ (7 << shift)) | (1 << shift)
 	}
+	pin.direction = direction
 
 	//#define INP_GPIO(g)   *(gpio.addr + ((g)/10)) &= ~(7<<(((g)%10)*3))
 	//#define OUT_GPIO(g)   *(gpio.addr + ((g)/10)) |=  (1<<(((g)%10)*3))
@@ -210,9 +171,9 @@ func gpiopinMode(pin Pin, direction int) {
 
 // gpioWritePin sets a given pin High(1) or Low(0)
 // by setting the clear or set registers respectively
-func gpioWritePin(pin Pin, state int) {
+func gpioWritePin(bcmNumber uint8, state uint) error {
 
-	p := uint8(pin)
+	p := (bcmNumber)
 
 	// Clear register, 10 / 11 depending on bank
 	// Set register, 7 / 8 depending on bank
@@ -231,14 +192,14 @@ func gpioWritePin(pin Pin, state int) {
 	} else {
 		gpioArry[setReg] = 1 << (p & 31)
 	}
-
+	return nil
 }
 
-func gpioPullMode(pin Pin, pull Pull) {
+func gpioPullMode(bcmNumber uint8, pull Pull) {
 	// Pull up/down/off register has offset 38 / 39, pull is 37
-	pullClkReg := uint8(pin)/32 + 38
+	pullClkReg := (bcmNumber)/32 + 38
 	pullReg := 37
-	shift := (uint8(pin) % 32) // get 0 or 1 bank
+	shift := ((bcmNumber) % 32) // get 0 or 1 bank
 
 	memlock.Lock()
 	defer memlock.Unlock()
@@ -264,34 +225,6 @@ func gpioPullMode(pin Pin, pull Pull) {
 }
 
 /*
-const (
-	edgeNone edge = iota
-	edgeRising
-	edgeFalling
-	edgeBoth
-)
-func setEdgeTrigger(p Pin, e edge) {
-	edge, err := os.OpenFile(fmt.Sprintf("/sys/class/gpio/gpio%d/edge", p.Number), os.O_WRONLY, 0600)
-	if err != nil {
-		fmt.Printf("failed to open gpio %d edge file for writing\n", p.Number)
-		os.Exit(1)
-	}
-	defer edge.Close()
-
-	switch e {
-	case edgeNone:
-		edge.Write([]byte("none"))
-	case edgeRising:
-		edge.Write([]byte("rising"))
-	case edgeFalling:
-		edge.Write([]byte("falling"))
-	case edgeBoth:
-		edge.Write([]byte("both"))
-	default:
-		panic(fmt.Sprintf("setEdgeTrigger called with invalid edge %d", e))
-	}
-}
-
 https://github.com/jameswalmsley/RaspberryPi-FreeRTOS/blob/master/Demo/Drivers/gpio.c
 typedef struct {
 	unsigned long	GPFSEL[6];	///< Function selection registers.
