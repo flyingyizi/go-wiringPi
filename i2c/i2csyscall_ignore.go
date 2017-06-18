@@ -27,7 +27,7 @@ const (
 
 const (
 	I2cSmBusBlockMax    = C.I2C_SMBUS_BLOCK_MAX     /* As specified in SMBus standard */
-	I2cSmBusI2cBlockMax = C.I2C_SMBUS_I2C_BLOCK_MAX /* Not specified but we use same structure */
+	I2cSmBusI2cBlockMax = I2cSmBusBlockMax /* Not specified but we use same structure */
 )
 
 type i2c_smbus_ioctl_data C.struct_i2c_smbus_ioctl_data

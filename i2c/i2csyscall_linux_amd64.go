@@ -21,8 +21,8 @@ const (
 )
 
 const (
-	I2cSmBusBlockMax    = 32
-	I2cSmBusI2cBlockMax = 32
+	I2cSmBusBlockMax    = 0x20
+	I2cSmBusI2cBlockMax = I2cSmBusBlockMax
 )
 
 type i2c_smbus_ioctl_data struct {
