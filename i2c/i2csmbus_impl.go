@@ -195,7 +195,7 @@ func i2c_smbus_read_block_data(f *os.File, command uint8) ([]byte, error) {
 	  			return data.block[0];
 	  	}
 	  }*/
-	block := make([]byte, i2C_SMBUS_BLOCK_MAX+2, i2C_SMBUS_BLOCK_MAX+2)
+	block := make([]byte, I2cSmBusBlockMax+2, I2cSmBusBlockMax+2)
 	err := i2c_smbus_access(f, I2cSMBusRead /*read_write*/, command /*command*/, I2cSMBusBlockData /*size*/, block /*data*/)
 	len := len(block)
 	if (len > 0) && err == nil {
