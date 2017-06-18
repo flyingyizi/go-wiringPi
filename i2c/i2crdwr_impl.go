@@ -6,48 +6,10 @@ import (
 	"unsafe"
 )
 
-//1. IOCTL I2C_RDWR
-//This method allows for simultaneous read/write and sending an uninterrupted
-//sequence of message. Not all i2c devices support this method.
-//Before performing i/o with this method, you should check whether the
-//device supports this method using an ioctl I2C_FUNCS operation.
-//Using this method, you do not need to perform an ioctl I2C_SLAVE
-//operation -- it is done behind the scenes using the information embedded in the messages.
-
-const (
-	i2C_FUNCS = 0x0705 /* Get the adapter functionality */
-	i2C_RDWR  = 0x0707 /* Combined R/W transfer (one stop only)*/
-)
-
-const (
-
-	/* To determine what functionality is present */
-
-	i2C_FUNC_I2C = 0x00000001
-
-//#define I2C_FUNC_10BIT_ADDR		0x00000002
-//#define I2C_FUNC_PROTOCOL_MANGLING	0x00000004 /* I2C_M_{REV_DIR_ADDR,NOSTART,..} */
-//#define I2C_FUNC_SMBUS_PEC		0x00000008
-//#define I2C_FUNC_SMBUS_BLOCK_PROC_CALL	0x00008000 /* SMBus 2.0 */
-//#define I2C_FUNC_SMBUS_QUICK		0x00010000
-//#define I2C_FUNC_SMBUS_READ_BYTE	0x00020000
-//#define I2C_FUNC_SMBUS_WRITE_BYTE	0x00040000
-//#define I2C_FUNC_SMBUS_READ_BYTE_DATA	0x00080000
-//#define I2C_FUNC_SMBUS_WRITE_BYTE_DATA	0x00100000
-//#define I2C_FUNC_SMBUS_READ_WORD_DATA	0x00200000
-//#define I2C_FUNC_SMBUS_WRITE_WORD_DATA	0x00400000
-//#define I2C_FUNC_SMBUS_PROC_CALL	0x00800000
-//#define I2C_FUNC_SMBUS_READ_BLOCK_DATA	0x01000000
-//#define I2C_FUNC_SMBUS_WRITE_BLOCK_DATA 0x02000000
-//#define I2C_FUNC_SMBUS_READ_I2C_BLOCK	0x04000000 /* I2C-like block xfer  */
-//#define I2C_FUNC_SMBUS_WRITE_I2C_BLOCK	0x08000000 /* w/ 1-byte reg. addr. */
-
-)
-
 //https://github.com/ve3wwg/raspberry_pi/blob/master/mcp23017/i2c_funcs.c
 
 func i2c_funcs_ioctl(f *os.File, data uintptr) error {
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), i2C_FUNCS, data); errno != 0 {
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), I2cFuncs, data); errno != 0 {
 		return syscall.Errno(errno)
 	}
 	return nil
@@ -57,7 +19,7 @@ func supportI2cRDWR(f *os.File) (b bool, err error) {
 	var data uint64
 	err = i2c_funcs_ioctl(f, uintptr(unsafe.Pointer(&data)))
 	if err != nil {
-		x := data & i2C_FUNC_I2C
+		x := data & I2cFuncI2c
 		if x != 0 {
 			b = true
 		}

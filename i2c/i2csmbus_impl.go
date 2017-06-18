@@ -34,9 +34,9 @@ func i2c_smbus_access(f *os.File, read_write uint8, command uint8, size uint32, 
 	  	return ioctl(file,I2C_SMBUS,&args);
 	  }
 	*/
-	args := i2c_smbus_ioctl_data{read_write: read_write, command: command, size: size}
+	args := i2c_smbus_ioctl_data{Write: read_write, Command: command, Size: size}
 	if data == nil {
-		args.data = uintptr(unsafe.Pointer(nil))
+		args.Data = (*[34]byte)(unsafe.Pointer(nil))
 		err = i2c_smbus_ioctl(f, uintptr(unsafe.Pointer(&args)))
 
 	} else {
@@ -44,19 +44,19 @@ func i2c_smbus_access(f *os.File, read_write uint8, command uint8, size uint32, 
 		case *uint8:
 			x, ok := data.(*uint8)
 			if ok {
-				args.data = uintptr(unsafe.Pointer(x))
+				args.Data = (*[34]byte)(unsafe.Pointer(x))
 				err = i2c_smbus_ioctl(f, uintptr(unsafe.Pointer(&args)))
 			}
 		case *uint16:
 			x, ok := data.(*uint16)
 			if ok {
-				args.data = uintptr(unsafe.Pointer(x))
+				args.Data = (*[34]byte)(unsafe.Pointer(x))
 				err = i2c_smbus_ioctl(f, uintptr(unsafe.Pointer(&args)))
 			}
 		case []byte:
 			x, ok := data.([]byte)
 			if ok {
-				args.data = uintptr(unsafe.Pointer(&x[0]))
+				args.Data = (*[34]byte)(unsafe.Pointer(&x[0]))
 				err = i2c_smbus_ioctl(f, uintptr(unsafe.Pointer(&args)))
 			}
 		default:

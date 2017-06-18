@@ -21,6 +21,11 @@ const (
 )
 
 const (
+	I2cFuncs = 0x705
+	I2cRDWR  = 0x707
+)
+
+const (
 	I2cSmBusBlockMax    = 0x20
 	I2cSmBusI2cBlockMax = I2cSmBusBlockMax
 )
@@ -35,4 +40,8 @@ type i2c_smbus_ioctl_data struct {
 
 const (
 	Sizeofi2c_smbus_ioctl_data = 0x10
+)
+
+const (
+	I2cFuncI2c = 0x1
 )
